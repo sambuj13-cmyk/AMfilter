@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="banner.png" width="800" alt="AMFilter Banner">
+  <img src="banner.png" width="400" alt="AMFilter Banner">
 </p>
 
 
