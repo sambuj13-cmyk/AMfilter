@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AMFilter</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Background blobs for light & shadows -->
+<div class="bg-blobs">
+    <div class="blob blob1"></div>
+    <div class="blob blob2"></div>
+</div>
+
+<!-- Big faint logo text in background -->
+<div class="logo-bg-text">AMFILTER</div>
+<header class="header">
+    <div class="brand">
+        <!-- Picture Logo -->
+        <img src="logo.png" alt="AMFilter Logo" class="brand-image">
+
+        <div class="brand-text">
+            <div class="brand-name">AMFilter</div>
+            <div class="brand-tagline">Clean & customize your YouTube feed</div>
+        </div>
+    </div>
+
+    <!-- Right-side icons -->
+    <div class="header-right">
+        <a href="https://instagram.com/YOUR_INSTA_HANDLE" target="_blank" class="icon-btn" title="Instagram">
+            <img src="insta.jpg" class="social-icon" alt="Instagram">
+            
+        </a>
+
+        <a href="https://github.com/YOUR_GITHUB_USERNAME" target="_blank" class="icon-btn" title="GitHub">
+            <img src="github.jpg" class="social-icon" alt="GitHub">
+        </a>
+
+        <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
+    </div>
+</header>
+
+
+<main class="container">
+
+    <section class="filter-box">
+        <h2 class="section-title">Search & Filter</h2>
+
+        <div class="filter-row">
+            <div class="field-group small">
+                <label for="keyword">Keyword</label>
+                <input type="text" id="keyword" placeholder="e.g. study, gaming, lofi">
+            </div>
+
+            <div class="field-group tiny">
+                <label for="rating">Safety</label>
+                <select id="rating">
+                    <option value="all">All</option>
+                    <option value="PG">PG</option>
+                </select>
+            </div>
+
+            <div class="field-group tiny">
+                <label for="contentType">Type</label>
+                <select id="contentType">
+                    <option value="all">All</option>
+                    <option value="shorts">Shorts</option>
+                    <option value="videos">Videos</option>
+                </select>
+            </div>
+
+            <div class="field-group tiny button-wrapper">
+                <button id="filterBtn">Search</button>
+            </div>
+        </div>
+
+        <p class="hint-text">
+            Tip: Use <strong>PG</strong> + <strong>Shorts</strong> for safer short-form content.
+        </p>
+    </section>
+
+    <section class="results-section">
+        <div class="results-header">
+            <h2 class="section-title">Results</h2>
+            <div class="results-meta">
+                <span id="resultInfo" class="result-info"></span>
+                <span id="errorInfo" class="error-info"></span>
+            </div>
+        </div>
+
+        <div id="videoList" class="video-list"></div>
+
+        <!-- Loader + sentinel for infinite scroll -->
+        <div id="loader" class="loader hidden">Loading more...</div>
+    </section>
+
+</main>
+
+<footer class="footer">
+    <p>Made by Ambuj • AMFilter</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
