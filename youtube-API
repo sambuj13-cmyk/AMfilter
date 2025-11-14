@@ -1,0 +1,18 @@
+
+---
+
+## 🔧 Setup Instructions
+
+### 1️⃣ Get a YouTube API Key  
+1. Go to **Google Cloud Console**  
+2. Create a new project  
+3. Enable **YouTube Data API v3**  
+4. Create **API Key**  
+5. Copy the key
+
+### 2️⃣ Add Key to `app.js`
+
+In your JavaScript file:
+
+```js
+const API_KEY = "YOUR_API_KEY_HERE";
