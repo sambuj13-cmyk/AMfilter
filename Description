@@ -1,0 +1,56 @@
+# 🎥 AMFilter – A Modern YouTube Search & Filtering Tool
+
+AMFilter is a fully client-side YouTube search and filtering application built using **HTML**, **CSS**, and **JavaScript**, powered by the **YouTube Data API v3**.
+
+It provides a clean, modern interface for searching YouTube videos, filtering results, and customizing your viewing experience — all with smooth UI effects, dark/light mode, and infinite scrolling.
+
+---
+
+## 🚀 Features
+
+### 🔍 YouTube Search  
+Search anything (e.g., *study*, *gaming*, *lofi*, *coding*) and get live results using the YouTube Data API.
+
+### 🧹 Filter Options  
+- **PG Filter** using `safeSearch=strict`  
+- Filter by **Content Type**:
+  - `All`  
+  - `Shorts` (`videoDuration=short`)  
+  - `Videos` (`videoDuration=long`)  
+
+### ♾ Infinite Scroll  
+Videos load automatically as you scroll down the page.
+
+### 🌙 Dark / Light Mode  
+- Clean theme toggle button  
+- Remembers user choice with `localStorage`  
+
+### 🎨 Premium UI Design  
+- Neon-glow gradients  
+- 3D logo variants  
+- Glassmorphism cards  
+- Background lighting blobs  
+- Faded text watermark  
+- Animated hover effects  
+- Custom circular AMFilter icon  
+- Social icons (Instagram + GitHub)
+
+### ⚡ Fast & Lightweight  
+- No backend  
+- No frameworks  
+- Pure HTML/CSS/JS  
+- Loads instantly
+
+---
+
+## 🛠 Tech Stack
+
+- **HTML** – Page structure  
+- **CSS** – Theme system, UI design, gradients  
+- **JavaScript** – API calls, infinite scroll, theme toggle  
+- **YouTube Data API v3** – Search functionality  
+
+---
+
+## 📂 Project Structure
+
