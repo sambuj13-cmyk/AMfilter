@@ -1,6 +1,3 @@
-// 🔑 Your YouTube API key
-const API_KEY = "YOUR_API_KEY_HERE";
-
 // ------------ DOM ELEMENTS ------------
 const keywordInput = document.getElementById("keyword");
 const ratingSelect = document.getElementById("rating");
@@ -56,14 +53,6 @@ themeToggleBtn.addEventListener("click", () => {
   applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
 });
 
-// ------------ SEARCH HELPERS ------------
-function getSafeSearchFromRating(r) { return r === "PG" ? "strict" : "none"; }
-function getDurationFromContentType(t) {
-  if (t === "shorts") return "short";
-  if (t === "videos") return "long";
-  return "any";
-}
-
 // ------------ RENDER VIDEOS ------------
 function renderVideos(items, append = false) {
   if (!append) videoListEl.innerHTML = "";
@@ -103,40 +92,53 @@ function renderVideos(items, append = false) {
   });
 }
 
-// ------------ FETCH VIDEOS ------------
+// ------------ FETCH VIDEOS (via backend) ------------
 async function fetchVideos({ append = false } = {}) {
   if (!currentQuery) {
     errorInfoEl.textContent = "Please enter a keyword.";
     return;
   }
   if (isLoading) return;
+
   isLoading = true;
   loaderEl.classList.remove("hidden");
+  errorInfoEl.textContent = "";
 
   const params = new URLSearchParams({
-    key: API_KEY,
-    part: "snippet",
     q: currentQuery,
-    maxResults: "12",
-    type: "video",
-    safeSearch: getSafeSearchFromRating(currentRating),
-    videoDuration: getDurationFromContentType(currentContentType),
+    rating: currentRating,
+    contentType: currentContentType,
   });
 
-  if (append && nextPageToken) params.append("pageToken", nextPageToken);
+  if (append && nextPageToken) {
+    params.append("pageToken", nextPageToken);
+  }
 
-  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
-  const data = await res.json();
+  try {
+    const res = await fetch(`/api/search?${params.toString()}`);
+    const data = await res.json();
 
-  nextPageToken = data.nextPageToken || null;
-  if (!append) lastFetchedItems = [...data.items];
-  else lastFetchedItems.push(...data.items);
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to fetch videos");
+    }
 
-  renderVideos(data.items, append);
-  resultInfoEl.textContent = `Showing ${videoListEl.children.length} videos`;
+    nextPageToken = data.nextPageToken || null;
 
-  loaderEl.classList.add("hidden");
-  isLoading = false;
+    if (!append) {
+      lastFetchedItems = [...data.items];
+    } else {
+      lastFetchedItems.push(...data.items);
+    }
+
+    renderVideos(data.items, append);
+    resultInfoEl.textContent = `Showing ${videoListEl.children.length} videos`;
+  } catch (err) {
+    console.error(err);
+    errorInfoEl.textContent = "Error fetching videos. Please try again.";
+  } finally {
+    loaderEl.classList.add("hidden");
+    isLoading = false;
+  }
 }
 
 // ------------ YT API READY ------------
@@ -156,7 +158,7 @@ window.onYouTubeIframeAPIReady = function () {
 function openInMiniPlayer(video) {
   if (!miniReady) return;
 
-  popupPlayer.stopVideo(); // stop popup audio fully
+  popupPlayer.stopVideo();
 
   currentVideo = video;
   miniTitleEl.textContent = video.title;
@@ -168,11 +170,11 @@ function openInMiniPlayer(video) {
   miniPlayPauseBtn.textContent = "⏸";
 }
 
-// ------------ POPUP OPEN (FINAL FIX) ------------
+// ------------ POPUP OPEN ------------
 function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying = true } = {}) {
   if (!popupReady) return;
 
-  miniPlayer.stopVideo(); // stop mini audio before popup opens
+  miniPlayer.stopVideo();
 
   const isNew = !currentVideo || currentVideo.id !== video.id;
   currentVideo = video;
@@ -185,7 +187,6 @@ function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying =
 
   const startTime = (fromMini && !isNew) ? resumeTime : 0;
 
-  // ✔ USE loadVideoById → keeps time + autoplays
   popupPlayer.loadVideoById({
     videoId: video.id,
     startSeconds: startTime
@@ -193,31 +194,37 @@ function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying =
 
   if (fromMini && !wasPlaying) popupPlayer.pauseVideo();
 
-  // Load description
+  // Load description via backend
   modalDescriptionEl.textContent = "Loading...";
-  fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${video.id}&key=${API_KEY}`)
+  fetch(`/api/videoDetails?id=${encodeURIComponent(video.id)}`)
     .then(r => r.json())
     .then(d => {
+      if (d.error) {
+        modalDescriptionEl.textContent = "Failed to load description.";
+        return;
+      }
       modalDescriptionEl.textContent =
         d.items?.[0]?.snippet?.description ?? "No description available.";
+    })
+    .catch(() => {
+      modalDescriptionEl.textContent = "Failed to load description.";
     });
 
   renderModalRecommendations(video.id);
 }
 
-// ------------ POPUP CLOSE (SYNC FIXED) ------------
+// ------------ POPUP CLOSE ------------
 function closePlayerModal() {
   if (!currentVideo) return;
 
   const t = popupPlayer.getCurrentTime() || 0;
   const isPlaying = popupPlayer.getPlayerState() === YT.PlayerState.PLAYING;
 
-  popupPlayer.stopVideo(); // stop popup audio completely
+  popupPlayer.stopVideo();
 
   miniTitleEl.textContent = currentVideo.title;
   miniPlayerBox.classList.remove("hidden");
 
-  // ✔ loadVideoById → auto resume correctly
   miniPlayer.loadVideoById({ videoId: currentVideo.id, startSeconds: t });
 
   if (isPlaying) {
