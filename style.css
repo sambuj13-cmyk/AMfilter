@@ -498,3 +498,368 @@ body[data-theme="light"] .icon-btn {
 body[data-theme="light"] .social-icon {
     filter: invert(0); /* black icons in light mode */
 }
+
+/* ----------- PLAYER MODAL (POPUP) ----------- */
+
+.player-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+}
+
+.player-modal-content {
+    position: relative;
+    width: min(1000px, 95vw);
+    /* let height be flexible, only cap it */
+    max-height: 90vh;
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), var(--bg-elevated));
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.85);
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* whole modal can scroll inside if needed */
+}
+
+
+body[data-theme="light"] .player-modal-content {
+    background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.05), #ffffff);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.player-modal-header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.modal-close-btn {
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+body[data-theme="light"] .modal-close-btn {
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.modal-close-btn {
+    font-size: 14px;
+}
+
+.player-modal-main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 10px;
+    /* let content define its own height */
+    overflow: visible;
+}
+
+.player-modal-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.player-frame-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* 16:9 */
+    border-radius: 12px;
+    overflow: hidden;
+    background: #020617;
+}
+
+.player-frame-wrapper iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.player-modal-info h2 {
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+
+.player-modal-info p {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* description header + toggle */
+.description-header {
+    margin-top: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.description-toggle {
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.8);
+    color: var(--text);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+body[data-theme="light"] .description-toggle {
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.modal-description {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--muted);
+    max-height: 72px;        /* ~3–4 lines when collapsed */
+    overflow: hidden;
+    white-space: pre-line;
+    position: relative;
+}
+
+/* Expanded description */
+.modal-description.expanded {
+    max-height: 260px;
+    overflow-y: auto;        /* now scrollable when long */
+}
+
+/* Fade effect when collapsed */
+.modal-description:not(.expanded)::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: linear-gradient(to bottom, transparent, var(--bg-elevated));
+}
+
+
+.player-modal-right {
+    border-left: 1px solid rgba(148, 163, 184, 0.4);
+    padding-left: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+}
+
+.player-modal-right h3 {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.modal-rec-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-rec-card {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.8);
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.12s ease;
+}
+
+body[data-theme="light"] .modal-rec-card {
+    background: rgba(241, 245, 249, 0.9);
+}
+
+.modal-rec-card:hover {
+    background: rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+.modal-rec-thumb {
+    width: 70px;
+    height: 42px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+
+.modal-rec-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.modal-rec-title {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.modal-rec-channel {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.modal-empty {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* Mobile tweaks for modal */
+@media (max-width: 768px) {
+    .player-modal-content {
+        width: 96vw;
+        height: 92vh;
+        padding: 8px;
+    }
+
+    .player-modal-main {
+        grid-template-columns: 1fr;
+    }
+
+    .player-modal-right {
+        border-left: none;
+        border-top: 1px solid rgba(148, 163, 184, 0.4);
+        padding-left: 0;
+        padding-top: 6px;
+    }
+}
+
+/* Ensure hidden overrides modal display */
+.player-modal.hidden {
+    display: none;
+}
+
+/* ----------- MINI PLAYER ----------- */
+
+.mini-player {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.7);
+    box-shadow: 0 18px 32px rgba(0, 0, 0, 0.8);
+    max-width: 340px;
+}
+
+body[data-theme="light"] .mini-player {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 16px 28px rgba(15, 23, 42, 0.25);
+}
+
+.mini-player-left {
+    flex-shrink: 0;
+}
+
+.mini-frame-wrapper {
+    position: relative;
+    width: 140px;
+    padding-top: 56.25%; /* 16:9 */
+    border-radius: 8px;
+    overflow: hidden;
+    background: #020617;
+}
+
+.mini-frame-wrapper iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.mini-player-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 4px;
+    min-width: 0;
+}
+
+.mini-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    max-height: 3em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mini-controls {
+    display: flex;
+    gap: 6px;
+}
+
+.mini-btn {
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.9);
+    color: var(--text);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+body[data-theme="light"] .mini-btn {
+    background: rgba(248, 250, 252, 0.9);
+}
+
+.mini-btn:hover {
+    opacity: 0.9;
+}
+
+/* Ensure hidden overrides mini display */
+.mini-player.hidden {
+    display: none;
+}
+
+/* --- FIX: popup vs mini mode display --- */
+.player-active #ytPlayerContainer {
+    display: block;
+}
+.mini-active #ytPlayerContainer {
+    display: none;
+}
+.mini-active #ytMiniContainer {
+    display: block;
+}
+
+/* Disable scroll in background when popup open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Ensure expandable description scrolls properly */
+.modal-description.expanded {
+    max-height: 260px;
+    overflow-y: auto;
+    white-space: pre-line;
+}
