@@ -415,6 +415,7 @@ body[data-theme="light"] .video-card:hover {
 
 /* ----------- RESPONSIVE ----------- */
 
+/* ----------- RESPONSIVE ----------- */
 @media (max-width: 640px) {
     .header {
         flex-direction: row;
@@ -436,8 +437,42 @@ body[data-theme="light"] .video-card:hover {
         flex: 1 1 auto;
     }
 
+    /* Bigger inputs & selects on mobile */
+    .field-group input,
+    .field-group select {
+        font-size: 18px;
+        padding: 10px 14px;
+    }
+
+    /* Bigger, full-width button on mobile */
     #filterBtn {
         width: 100%;
+        font-size: 18px;
+        padding: 12px 18px;
+    }
+
+    /* Bigger section titles */
+    .section-title {
+        font-size: 20px;
+    }
+
+    /* Slightly bigger hint & meta text */
+    .hint-text {
+        font-size: 14px;
+    }
+
+    .result-info,
+    .error-info {
+        font-size: 14px;
+    }
+
+    /* Bigger card titles on mobile */
+    .video-title {
+        font-size: 16px;
+    }
+
+    .video-meta {
+        font-size: 13px;
     }
 
     .results-header {
@@ -449,6 +484,7 @@ body[data-theme="light"] .video-card:hover {
         text-align: left;
     }
 }
+
 
 .brand {
     display: flex;
