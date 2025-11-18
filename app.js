@@ -174,32 +174,57 @@ async function fetchVideos({ append = false } = {}) {
   }
 
   try {
-    const res = await fetch(`/api/search?${params.toString()}`);
-    const data = await res.json();
+    const url = `/api/search?${params.toString()}`;
+    console.log("Calling:", url);
+
+    const res = await fetch(url);
+
+    // If response is not OK, try to read JSON error
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      data = null;
+    }
 
     if (!res.ok) {
-      throw new Error(data.error || "Failed to fetch videos");
+      console.error("Backend /api/search error:", res.status, data);
+      const msg =
+        (data && data.error) ||
+        `API error ${res.status} from /api/search`;
+      errorInfoEl.textContent = msg;
+      return;
     }
+
+    console.log("Search response:", data);
 
     nextPageToken = data.nextPageToken || null;
 
     if (!append) {
-      lastFetchedItems = [...data.items];
+      lastFetchedItems = Array.isArray(data.items) ? [...data.items] : [];
       currentVideoIndex = -1; // reset playlist index on a fresh search
     } else {
-      lastFetchedItems.push(...data.items);
+      if (Array.isArray(data.items)) {
+        lastFetchedItems.push(...data.items);
+      }
+    }
+
+    if (!Array.isArray(data.items) || data.items.length === 0) {
+      resultInfoEl.textContent = "No videos found for this search.";
+      return;
     }
 
     renderVideos(data.items, append);
     resultInfoEl.textContent = `Showing ${videoListEl.children.length} videos`;
   } catch (err) {
-    console.error(err);
-    errorInfoEl.textContent = "Error fetching videos. Please try again.";
+    console.error("Fetch failed:", err);
+    errorInfoEl.textContent = err.message || "Error fetching videos.";
   } finally {
     loaderEl.classList.add("hidden");
     isLoading = false;
   }
 }
+
 
 // ------------ YT API READY ------------
 function onPopupPlayerStateChange(event) {
