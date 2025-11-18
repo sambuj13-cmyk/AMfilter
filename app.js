@@ -18,12 +18,20 @@ const modalDescriptionEl = document.getElementById("modalDescription");
 const descriptionToggleBtn = document.getElementById("descriptionToggle");
 const modalRecommendationsEl = document.getElementById("modalRecommendations");
 
+// NEW: popup next/prev buttons
+const nextVideoBtn = document.getElementById("nextVideoBtn");
+const prevVideoBtn = document.getElementById("prevVideoBtn");
+
 // Mini player
 const miniPlayerBox = document.getElementById("miniPlayer");
 const miniTitleEl = document.getElementById("miniTitle");
 const miniPlayPauseBtn = document.getElementById("miniPlayPauseBtn");
 const miniExpandBtn = document.getElementById("miniExpandBtn");
 const miniCloseBtn = document.getElementById("miniCloseBtn");
+
+// NEW: mini next/prev buttons
+const miniNextBtn = document.getElementById("miniNextBtn");
+const miniPrevBtn = document.getElementById("miniPrevBtn");
 
 // ------------ STATE ------------
 let currentQuery = "";
@@ -33,6 +41,7 @@ let nextPageToken = null;
 let isLoading = false;
 let lastFetchedItems = [];
 let currentVideo = null;
+let currentVideoIndex = -1; // NEW: track index in lastFetchedItems
 
 // YT players
 let popupPlayer = null;
@@ -52,6 +61,57 @@ function initTheme() {
 themeToggleBtn.addEventListener("click", () => {
   applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
 });
+
+// ------------ PLAYLIST HELPERS (NEW) ------------
+
+function syncIndexFromCurrentVideo() {
+  if (!currentVideo) return;
+  const idx = lastFetchedItems.findIndex(v => v.id.videoId === currentVideo.id);
+  if (idx !== -1) currentVideoIndex = idx;
+}
+
+function playByIndex(index, mode = "popup") {
+  const item = lastFetchedItems[index];
+  if (!item) return;
+
+  currentVideoIndex = index;
+  const video = {
+    id: item.id.videoId,
+    title: item.snippet.title,
+    channel: item.snippet.channelTitle
+  };
+  currentVideo = video;
+
+  if (mode === "mini") {
+    openInMiniPlayer(video);
+  } else {
+    openPlayerModal(video, { fromMini: false });
+  }
+}
+
+function playNext(mode = "popup") {
+  if (!lastFetchedItems.length) return;
+  if (currentVideoIndex === -1) syncIndexFromCurrentVideo();
+  if (currentVideoIndex === -1) return;
+
+  let nextIndex = currentVideoIndex + 1;
+  if (nextIndex >= lastFetchedItems.length) {
+    nextIndex = 0; // loop back to start
+  }
+  playByIndex(nextIndex, mode);
+}
+
+function playPrev(mode = "popup") {
+  if (!lastFetchedItems.length) return;
+  if (currentVideoIndex === -1) syncIndexFromCurrentVideo();
+  if (currentVideoIndex === -1) return;
+
+  let prevIndex = currentVideoIndex - 1;
+  if (prevIndex < 0) {
+    prevIndex = lastFetchedItems.length - 1; // loop to last
+  }
+  playByIndex(prevIndex, mode);
+}
 
 // ------------ RENDER VIDEOS ------------
 function renderVideos(items, append = false) {
@@ -78,13 +138,12 @@ function renderVideos(items, append = false) {
       </div>
     `;
 
-    const videoData = { id, title: s.title, channel: s.channelTitle };
-
     card.addEventListener("click", () => {
-      if (!miniPlayerBox.classList.contains("hidden")) {
-        openInMiniPlayer(videoData);
-      } else {
-        openPlayerModal(videoData, { fromMini: false });
+      // find index in the global list, then play via playlist logic
+      const idx = lastFetchedItems.findIndex(v => v.id.videoId === id);
+      const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
+      if (idx !== -1) {
+        playByIndex(idx, mode);
       }
     });
 
@@ -126,6 +185,7 @@ async function fetchVideos({ append = false } = {}) {
 
     if (!append) {
       lastFetchedItems = [...data.items];
+      currentVideoIndex = -1; // reset playlist index on a fresh search
     } else {
       lastFetchedItems.push(...data.items);
     }
@@ -142,15 +202,35 @@ async function fetchVideos({ append = false } = {}) {
 }
 
 // ------------ YT API READY ------------
+function onPopupPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.ENDED) {
+    // autoplay next in popup mode
+    playNext("popup");
+  }
+}
+
+function onMiniPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.ENDED) {
+    // autoplay next in mini mode
+    playNext("mini");
+  }
+}
+
 window.onYouTubeIframeAPIReady = function () {
   popupPlayer = new YT.Player("popupPlayer", {
     playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
-    events: { onReady: () => (popupReady = true) }
+    events: {
+      onReady: () => (popupReady = true),
+      onStateChange: onPopupPlayerStateChange
+    }
   });
 
   miniPlayer = new YT.Player("miniPlayerFrame", {
     playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
-    events: { onReady: () => (miniReady = true) }
+    events: {
+      onReady: () => (miniReady = true),
+      onStateChange: onMiniPlayerStateChange
+    }
   });
 };
 
@@ -158,7 +238,9 @@ window.onYouTubeIframeAPIReady = function () {
 function openInMiniPlayer(video) {
   if (!miniReady) return;
 
-  popupPlayer.stopVideo();
+  if (popupPlayer && popupReady) {
+    popupPlayer.stopVideo();
+  }
 
   currentVideo = video;
   miniTitleEl.textContent = video.title;
@@ -174,7 +256,9 @@ function openInMiniPlayer(video) {
 function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying = true } = {}) {
   if (!popupReady) return;
 
-  miniPlayer.stopVideo();
+  if (miniPlayer && miniReady) {
+    miniPlayer.stopVideo();
+  }
 
   const isNew = !currentVideo || currentVideo.id !== video.id;
   currentVideo = video;
@@ -192,7 +276,9 @@ function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying =
     startSeconds: startTime
   });
 
-  if (fromMini && !wasPlaying) popupPlayer.pauseVideo();
+  if (fromMini && !wasPlaying) {
+    popupPlayer.pauseVideo();
+  }
 
   // Load description via backend
   modalDescriptionEl.textContent = "Loading...";
@@ -264,12 +350,22 @@ function renderModalRecommendations(currentVideoId) {
     `;
 
     card.addEventListener("click", () => {
-      if (!miniPlayerBox.classList.contains("hidden")) openInMiniPlayer(vid);
-      else openPlayerModal(vid, { fromMini: false });
+      const idx = lastFetchedItems.findIndex(v => v.id.videoId === vid.id);
+      const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
+      if (idx !== -1) {
+        playByIndex(idx, mode);
+      }
     });
 
     modalRecommendationsEl.appendChild(card);
   });
+
+  if (!next.length) {
+    const empty = document.createElement("div");
+    empty.className = "modal-empty";
+    empty.textContent = "No more videos in this search.";
+    modalRecommendationsEl.appendChild(empty);
+  }
 }
 
 // ------------ EVENT HANDLERS ------------
@@ -311,7 +407,9 @@ playerModal.addEventListener("click", e => {
 
 // Mini close
 miniCloseBtn.addEventListener("click", () => {
-  miniPlayer.stopVideo();
+  if (miniPlayer && miniReady) {
+    miniPlayer.stopVideo();
+  }
   miniPlayerBox.classList.add("hidden");
 });
 
@@ -343,6 +441,22 @@ miniExpandBtn.addEventListener("click", () => {
 descriptionToggleBtn.addEventListener("click", () => {
   const expanded = modalDescriptionEl.classList.toggle("expanded");
   descriptionToggleBtn.textContent = expanded ? "Show less ▲" : "Show more ▼";
+});
+
+// NEW: Popup next/prev buttons
+nextVideoBtn.addEventListener("click", () => {
+  playNext("popup");
+});
+prevVideoBtn.addEventListener("click", () => {
+  playPrev("popup");
+});
+
+// NEW: Mini next/prev buttons
+miniNextBtn.addEventListener("click", () => {
+  playNext("mini");
+});
+miniPrevBtn.addEventListener("click", () => {
+  playPrev("mini");
 });
 
 // Init
