@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       type: "video",
       safeSearch,
       videoDuration,
+      videoEmbeddable: "true",
     });
 
     if (pageToken) params.append("pageToken", pageToken);
@@ -36,7 +37,12 @@ export default async function handler(req, res) {
     const data = await ytRes.json();
 
     if (!ytRes.ok) {
-      return res.status(ytRes.status).json(data);
+      // 🔴 Normalize error so frontend always gets a string, not an object
+      const message =
+        (data && data.error && data.error.message) ||
+        "YouTube API error. Check your API key / quota.";
+      console.error("YouTube API error:", data);
+      return res.status(ytRes.status).json({ error: message });
     }
 
     return res.status(200).json(data);
