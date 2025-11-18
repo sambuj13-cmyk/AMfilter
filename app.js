@@ -178,20 +178,28 @@ async function fetchVideos({ append = false } = {}) {
     console.log("Calling:", url);
 
     const res = await fetch(url);
-
-    // If response is not OK, try to read JSON error
     let data;
+
     try {
       data = await res.json();
     } catch (e) {
-      data = null;
+      console.error("Failed to parse JSON from /api/search:", e);
+      errorInfoEl.textContent = "Server returned invalid response.";
+      return;
     }
 
     if (!res.ok) {
       console.error("Backend /api/search error:", res.status, data);
-      const msg =
-        (data && data.error) ||
-        `API error ${res.status} from /api/search`;
+
+      let msg = "Error fetching videos.";
+      if (data && typeof data === "object") {
+        if (typeof data.error === "string") {
+          msg = data.error;
+        } else if (data.error && typeof data.error.message === "string") {
+          msg = data.error.message;
+        }
+      }
+
       errorInfoEl.textContent = msg;
       return;
     }
@@ -224,6 +232,7 @@ async function fetchVideos({ append = false } = {}) {
     isLoading = false;
   }
 }
+
 
 
 // ------------ YT API READY ------------
