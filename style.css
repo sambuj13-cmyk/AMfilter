@@ -485,7 +485,6 @@ body[data-theme="light"] .video-card:hover {
     }
 }
 
-
 .brand {
     display: flex;
     align-items: center;
@@ -568,7 +567,6 @@ body[data-theme="light"] .social-icon {
     overflow: hidden; /* whole modal can scroll inside if needed */
 }
 
-
 body[data-theme="light"] .player-modal-content {
     background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.05), #ffffff);
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
@@ -643,6 +641,31 @@ body[data-theme="light"] .modal-close-btn {
     color: var(--muted);
 }
 
+/* --- Player next/prev controls (popup) --- */
+.player-nav {
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+}
+
+.player-nav-btn {
+    border: 1px solid var(--border);
+    background: rgba(15, 23, 42, 0.85);
+    color: var(--text);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.player-nav-btn:hover {
+    opacity: 0.9;
+}
+
+body[data-theme="light"] .player-nav-btn {
+    background: rgba(248, 250, 252, 0.95);
+}
+
 /* description header + toggle */
 .description-header {
     margin-top: 6px;
@@ -692,7 +715,6 @@ body[data-theme="light"] .description-toggle {
     height: 24px;
     background: linear-gradient(to bottom, transparent, var(--bg-elevated));
 }
-
 
 .player-modal-right {
     border-left: 1px solid rgba(148, 163, 184, 0.4);
