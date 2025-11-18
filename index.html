@@ -122,6 +122,12 @@
                     <h2 id="modalTitle"></h2>
                     <p id="modalChannel"></p>
 
+                    <!-- NEW: Next / Prev buttons for popup player -->
+                    <div class="player-nav">
+                        <button id="prevVideoBtn" class="player-nav-btn">⟨ Prev</button>
+                        <button id="nextVideoBtn" class="player-nav-btn">Next ⟩</button>
+                    </div>
+
                     <div class="description-header">
                         <span>Description</span>
                         <button id="descriptionToggle" class="description-toggle">Show more ▼</button>
@@ -151,7 +157,10 @@
     <div class="mini-player-right">
         <div id="miniTitle" class="mini-title">Playing...</div>
         <div class="mini-controls">
+            <!-- NEW: Prev / Next buttons in mini player -->
+            <button id="miniPrevBtn" class="mini-btn">⟨</button>
             <button id="miniPlayPauseBtn" class="mini-btn">⏯</button>
+            <button id="miniNextBtn" class="mini-btn">⟩</button>
             <button id="miniExpandBtn" class="mini-btn">⤢</button>
             <button id="miniCloseBtn" class="mini-btn">✕</button>
         </div>
