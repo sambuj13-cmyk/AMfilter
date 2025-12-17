@@ -1,3 +1,118 @@
+/* ---------- 3D INTRO ANIMATION ---------- */
+
+#intro {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at top, #020617, #000);
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.intro-3d {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Big background text */
+.intro-bg-text {
+  position: absolute;
+  font-size: clamp(100px, 22vw, 260px);
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.035);
+  transform: translateZ(-300px);
+  animation: bgFloat 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Center text */
+.intro-center {
+  text-align: center;
+  transform-style: preserve-3d;
+  animation: popIn 1.4s ease forwards;
+}
+
+.intro-logo {
+  font-size: 48px;
+  letter-spacing: 4px;
+  color: white;
+}
+
+.intro-tagline {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* Floating 3D shape */
+.shape-wrapper {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  transform-style: preserve-3d;
+  animation: shapeFloat 5s ease-in-out infinite;
+}
+
+.floating-shape {
+  width: 100%;
+  height: 100%;
+  border-radius: 32px;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.6),
+    rgba(236, 72, 153, 0.6)
+  );
+  box-shadow:
+    0 0 40px rgba(59, 130, 246, 0.4),
+    inset 0 0 40px rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  transform: rotateX(25deg) rotateY(35deg);
+}
+
+/* Animations */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateZ(120px) scale(0.85);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateZ(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes shapeFloat {
+  0% {
+    transform: translateY(0) rotateX(20deg) rotateY(30deg);
+  }
+  50% {
+    transform: translateY(-20px) rotateX(30deg) rotateY(50deg);
+  }
+  100% {
+    transform: translateY(0) rotateX(20deg) rotateY(30deg);
+  }
+}
+
+@keyframes bgFloat {
+  0% {
+    transform: translateZ(-300px) translateY(0);
+  }
+  50% {
+    transform: translateZ(-300px) translateY(-10px);
+  }
+  100% {
+    transform: translateZ(-300px) translateY(0);
+  }
+}
+
+
 /* ----------- CSS RESET & THEME VARIABLES ----------- */
 
 * {
