@@ -1,18 +1,27 @@
-// ================= INTRO + SOUND (3D INTRO EXIT) =================
-window.addEventListener("load", () => {
-  const intro = document.getElementById("intro");
+const intro = document.getElementById("intro");
+const openSound = document.getElementById("openSound");
 
-  if (!intro) return;
+let introDone = false;
+
+// Wait for ENTER key
+document.addEventListener("keydown", (e) => {
+  if (introDone) return;
+  if (e.key !== "Enter") return;
+
+  introDone = true;
+
+  // Play sound (allowed)
+  openSound.volume = 0.25;
+  openSound.play().catch(() => {});
+
+  // Exit intro
+  intro.style.transition = "opacity 0.8s ease, transform 0.8s ease";
+  intro.style.opacity = "0";
+  intro.style.transform = "scale(1.05)";
 
   setTimeout(() => {
-    intro.style.transition = "opacity 0.9s ease, transform 0.9s ease";
-    intro.style.opacity = "0";
-    intro.style.transform = "scale(1.05)";
-
-    setTimeout(() => {
-      intro.remove();
-    }, 900);
-  }, 2200);
+    intro.remove();
+  }, 800);
 });
 
 // Opening sound (browser-safe)
