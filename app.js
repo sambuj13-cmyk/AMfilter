@@ -1,33 +1,27 @@
 // ================= INTRO + SOUND (3D INTRO EXIT) =================
 window.addEventListener("load", () => {
   const intro = document.getElementById("intro");
-
   if (!intro) return;
 
   setTimeout(() => {
-    intro.style.transition = "opacity 0.9s ease, transform 0.9s ease";
     intro.style.opacity = "0";
     intro.style.transform = "scale(1.05)";
-
-    setTimeout(() => {
-      intro.remove();
-    }, 900);
+    setTimeout(() => intro.remove(), 900);
   }, 2200);
 });
 
 // Opening sound (browser-safe)
 const openSound = document.getElementById("openSound");
-let soundPlayed = false;
+function playStartupSound() {
+  if (!openSound) return;
+  openSound.volume = 0.25;
+  openSound.play().catch(() => {});
+  window.removeEventListener("pointerdown", playStartupSound);
+}
+window.addEventListener("pointerdown", playStartupSound);
 
-document.addEventListener("click", () => {
-  if (!soundPlayed && openSound) {
-    openSound.play().catch(() => {});
-    soundPlayed = true;
-  }
-}, { once: true });
 
-
-// ================= API BASE (LOCAL vs VERCEL) =================
+// ================= API BASE =================
 const API_BASE =
   location.hostname === "localhost" || location.hostname === "127.0.0.1"
     ? "https://amfilter.vercel.app"
@@ -54,7 +48,7 @@ const modalDescriptionEl = document.getElementById("modalDescription");
 const descriptionToggleBtn = document.getElementById("descriptionToggle");
 const modalRecommendationsEl = document.getElementById("modalRecommendations");
 
-// Navigation buttons
+// Navigation
 const nextVideoBtn = document.getElementById("nextVideoBtn");
 const prevVideoBtn = document.getElementById("prevVideoBtn");
 
@@ -100,12 +94,6 @@ themeToggleBtn.addEventListener("click", () => {
 
 
 // ================= PLAYLIST HELPERS =================
-function syncIndexFromCurrentVideo() {
-  if (!currentVideo) return;
-  const idx = lastFetchedItems.findIndex(v => v.id.videoId === currentVideo.id);
-  if (idx !== -1) currentVideoIndex = idx;
-}
-
 function playByIndex(index, mode = "popup") {
   const item = lastFetchedItems[index];
   if (!item) return;
@@ -123,13 +111,11 @@ function playByIndex(index, mode = "popup") {
 
 function playNext(mode = "popup") {
   if (!lastFetchedItems.length) return;
-  if (currentVideoIndex === -1) syncIndexFromCurrentVideo();
   playByIndex((currentVideoIndex + 1) % lastFetchedItems.length, mode);
 }
 
 function playPrev(mode = "popup") {
   if (!lastFetchedItems.length) return;
-  if (currentVideoIndex === -1) syncIndexFromCurrentVideo();
   playByIndex(
     (currentVideoIndex - 1 + lastFetchedItems.length) % lastFetchedItems.length,
     mode
@@ -150,15 +136,15 @@ function renderVideos(items, append = false) {
     card.innerHTML = `
       <img src="${s.thumbnails.medium.url}">
       <div class="video-body">
-        <a class="video-title">${s.title}</a>
+        <div class="video-title">${s.title}</div>
         <div class="video-meta">
           <span>${s.channelTitle}</span>
           <span>${new Date(s.publishedAt).toLocaleDateString()}</span>
         </div>
-        <span class="badge">${
-          currentContentType === "shorts" ? "Short" :
-          currentContentType === "videos" ? "Video" : "YouTube"
-        }</span>
+        <span class="badge">
+          ${currentContentType === "shorts" ? "Short" :
+            currentContentType === "videos" ? "Video" : "YouTube"}
+        </span>
       </div>
     `;
 
@@ -211,7 +197,7 @@ async function fetchVideos({ append = false } = {}) {
 
     renderVideos(data.items, append);
     resultInfoEl.textContent = `Showing ${videoListEl.children.length} videos`;
-  } catch (err) {
+  } catch {
     errorInfoEl.textContent = "Server error.";
   } finally {
     loaderEl.classList.add("hidden");
@@ -221,65 +207,14 @@ async function fetchVideos({ append = false } = {}) {
 
 
 // ================= YOUTUBE PLAYER =================
-function onPopupPlayerStateChange(e) {
-  if (e.data === YT.PlayerState.ENDED) playNext("popup");
-}
-function onMiniPlayerStateChange(e) {
-  if (e.data === YT.PlayerState.ENDED) playNext("mini");
-}
-
 window.onYouTubeIframeAPIReady = () => {
   popupPlayer = new YT.Player("popupPlayer", {
-    playerVars: { autoplay: 0, controls: 1 },
-    events: { onReady: () => popupReady = true, onStateChange: onPopupPlayerStateChange }
+    events: { onReady: () => popupReady = true }
   });
-
   miniPlayer = new YT.Player("miniPlayerFrame", {
-    playerVars: { autoplay: 0, controls: 1 },
-    events: { onReady: () => miniReady = true, onStateChange: onMiniPlayerStateChange }
+    events: { onReady: () => miniReady = true }
   });
 };
-
-
-// ================= PLAYERS =================
-function openInMiniPlayer(video) {
-  if (!miniReady) return;
-  popupPlayer?.stopVideo();
-  currentVideo = video;
-
-  miniTitleEl.textContent = video.title;
-  miniPlayerBox.classList.remove("hidden");
-  playerModal.classList.add("hidden");
-
-  miniPlayer.loadVideoById(video.id);
-  miniPlayer.playVideo();
-  miniPlayPauseBtn.textContent = "⏸";
-}
-
-function openPlayerModal(video) {
-  if (!popupReady) return;
-  miniPlayer?.stopVideo();
-  currentVideo = video;
-
-  miniPlayerBox.classList.add("hidden");
-  playerModal.classList.remove("hidden");
-
-  modalTitleEl.textContent = video.title;
-  modalChannelEl.textContent = video.channel;
-
-  popupPlayer.loadVideoById(video.id);
-
-  modalDescriptionEl.textContent = "Loading...";
-  fetch(`${API_BASE}/api/videoDetails?id=${video.id}`)
-    .then(r => r.json())
-    .then(d => {
-      modalDescriptionEl.textContent =
-        d.items?.[0]?.snippet?.description || "No description available.";
-    })
-    .catch(() => modalDescriptionEl.textContent = "Failed to load description.");
-
-  renderModalRecommendations(video.id);
-}
 
 
 // ================= EVENTS =================
@@ -299,31 +234,6 @@ window.addEventListener("scroll", () => {
   if (window.innerHeight + scrollY >= document.body.offsetHeight - 400) {
     if (nextPageToken && !isLoading) fetchVideos({ append: true });
   }
-});
-
-modalCloseBtn.addEventListener("click", () => {
-  popupPlayer?.stopVideo();
-  playerModal.classList.add("hidden");
-});
-
-miniCloseBtn.addEventListener("click", () => {
-  miniPlayer?.stopVideo();
-  miniPlayerBox.classList.add("hidden");
-});
-
-miniPlayPauseBtn.addEventListener("click", () => {
-  miniPlayer.getPlayerState() === YT.PlayerState.PLAYING
-    ? (miniPlayer.pauseVideo(), miniPlayPauseBtn.textContent = "▶")
-    : (miniPlayer.playVideo(), miniPlayPauseBtn.textContent = "⏸");
-});
-
-nextVideoBtn.addEventListener("click", () => playNext("popup"));
-prevVideoBtn.addEventListener("click", () => playPrev("popup"));
-miniNextBtn.addEventListener("click", () => playNext("mini"));
-miniPrevBtn.addEventListener("click", () => playPrev("mini"));
-
-descriptionToggleBtn.addEventListener("click", () => {
-  modalDescriptionEl.classList.toggle("expanded");
 });
 
 initTheme();
