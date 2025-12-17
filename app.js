@@ -8,11 +8,10 @@ window.addEventListener("load", () => {
     intro.style.opacity = "0";
     intro.style.transform = "scale(1.05)";
 
-    setTimeout(() => {
-      intro.remove();
-    }, 900);
-  }, 2200);
-});
+ setTimeout(() => {
+  intro.style.display = "none";
+  intro.remove();
+}, 900);
 
 // Browser-safe opening sound
 const openSound = document.getElementById("openSound");
