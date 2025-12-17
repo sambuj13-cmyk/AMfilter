@@ -1030,37 +1030,3 @@ body.modal-open {
     50% { transform: translateY(-18px) scale(1.05); }
     100% { transform: translateY(0) scale(1); }
 }
-/* -------- DOWNLOAD BUTTON (RED GRADIENT) -------- */
-
-.download-btn {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
-  border: none;
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.45);
-}
-
-.download-btn:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(239, 68, 68, 0.65);
-}
-
-/* -------- DISCLAIMER -------- */
-
-.disclaimer {
-  margin-top: 18px;
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
-}
-/* -------- INPUT FOCUS SAFETY FIX -------- */
-input,
-select,
-textarea {
-  pointer-events: auto !important;
-  position: relative;
-  z-index: 5;
-}
-
-
