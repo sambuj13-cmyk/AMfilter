@@ -1030,3 +1030,26 @@ body.modal-open {
     50% { transform: translateY(-18px) scale(1.05); }
     100% { transform: translateY(0) scale(1); }
 }
+/* -------- DOWNLOAD BUTTON -------- */
+
+.download-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none;
+  color: #fff;
+  font-weight: 600;
+}
+
+.download-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* -------- DISCLAIMER -------- */
+
+.disclaimer {
+  margin-top: 18px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
