@@ -1,3 +1,36 @@
+// ================= INTRO + OPENING SOUND =================
+window.addEventListener("load", () => {
+  const intro = document.getElementById("intro");
+  if (!intro) return;
+
+  // Let the intro stay for ~2.2s, then animate out
+  setTimeout(() => {
+    intro.style.transition = "opacity 0.9s ease, transform 0.9s ease";
+    intro.style.opacity = "0";
+    intro.style.transform = "scale(1.05)";
+
+    // Remove intro from DOM after animation
+    setTimeout(() => {
+      intro.remove();
+    }, 900);
+  }, 2200);
+});
+
+// Browser-safe opening sound (plays on first user interaction only)
+const openSound = document.getElementById("openSound");
+let soundPlayed = false;
+
+document.addEventListener(
+  "click",
+  () => {
+    if (!soundPlayed && openSound) {
+      openSound.play().catch(() => {});
+      soundPlayed = true;
+    }
+  },
+  { once: true }
+);
+
 // ------------ DOM ELEMENTS ------------
 const keywordInput = document.getElementById("keyword");
 const ratingSelect = document.getElementById("rating");
