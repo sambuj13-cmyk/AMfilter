@@ -28,7 +28,7 @@
 <!-- OPENING SOUND -->
 <audio id="openSound" src="startup.mp3" preload="auto"></audio>
 
-<!-- Background blobs -->
+<!-- Background -->
 <div class="bg-blobs">
   <div class="blob blob1"></div>
   <div class="blob blob2"></div>
@@ -38,82 +38,60 @@
 
 <header class="header">
   <div class="brand">
-    <img src="logo.png" alt="AMFilter Logo" class="brand-image" />
+    <img src="logo.png" class="brand-image" />
     <div class="brand-text">
       <div class="brand-name">AMFilter</div>
       <div class="brand-tagline">Clean & customize your YouTube feed</div>
     </div>
   </div>
 
-  <div class="header-right">
-    <a href="https://www.instagram.com/justbeingambuj" target="_blank" class="icon-btn">
-      <img src="insta.jpg" class="social-icon" alt="Instagram" />
-    </a>
-    <a href="https://github.com/sambuj13-cmyk/AMfilter" target="_blank" class="icon-btn">
-      <img src="github.jpg" class="social-icon" alt="GitHub" />
-    </a>
-    <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
-  </div>
+  <button id="themeToggle" class="theme-toggle">🌙</button>
 </header>
 
 <main class="container">
+
+  <!-- SEARCH -->
   <section class="filter-box">
-    <h2 class="section-title">Search & Filter</h2>
-
     <div class="filter-row">
-      <div class="field-group small">
-        <label>Keyword</label>
-        <input id="keyword" placeholder="e.g. study, gaming, lofi" />
-      </div>
-
-      <div class="field-group tiny">
-        <label>Safety</label>
-        <select id="rating">
-          <option value="all">All</option>
-          <option value="PG">PG</option>
-        </select>
-      </div>
-
-      <div class="field-group tiny">
-        <label>Type</label>
-        <select id="contentType">
-          <option value="all">All</option>
-          <option value="shorts">Shorts</option>
-          <option value="videos">Videos</option>
-        </select>
-      </div>
-
-      <div class="field-group tiny button-wrapper">
-        <button id="filterBtn">Search</button>
-      </div>
+      <input id="keyword" placeholder="Search YouTube…" />
+      <select id="rating">
+        <option value="all">All</option>
+        <option value="PG">PG</option>
+      </select>
+      <select id="contentType">
+        <option value="all">All</option>
+        <option value="shorts">Shorts</option>
+        <option value="videos">Videos</option>
+      </select>
+      <button id="filterBtn">Search</button>
     </div>
-
-    <p class="hint-text">
-      Tip: Use <b>PG</b> + <b>Shorts</b> for safer content.
-    </p>
   </section>
 
+  <!-- RESULTS -->
   <section class="results-section">
-    <div class="results-header">
-      <h2 class="section-title">Results</h2>
-      <div class="results-meta">
-        <span id="resultInfo"></span>
-        <span id="errorInfo"></span>
-      </div>
-    </div>
-
     <div id="videoList" class="video-list"></div>
-    <div id="loader" class="loader hidden">Loading more…</div>
+    <div id="loader" class="loader hidden">Loading…</div>
+    <div id="errorInfo"></div>
   </section>
-
-  <p class="disclaimer">
-    Downloads are handled by third-party services. AMFilter does not host or download videos.
-  </p>
 </main>
 
-<footer class="footer">
-  Made by Ambuj • AMFilter
-</footer>
+<!-- 🎬 PLAYER MODAL (CRITICAL FIX) -->
+<div id="playerModal" class="player-modal hidden">
+  <div class="player-modal-backdrop"></div>
+
+  <div class="player-modal-content">
+    <button id="modalCloseBtn" class="modal-close-btn">✕</button>
+
+    <h2 id="modalTitle"></h2>
+    <p id="modalChannel"></p>
+
+    <div class="player-frame-wrapper">
+      <div id="popupPlayer"></div>
+    </div>
+
+    <p id="modalDescription" class="modal-description"></p>
+  </div>
+</div>
 
 <script src="app.js"></script>
 <script src="https://www.youtube.com/iframe_api"></script>
