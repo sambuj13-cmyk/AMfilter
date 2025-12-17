@@ -218,11 +218,31 @@ function openPlayerModal(video) {
   popupPlayer.loadVideoById(video.id);
 }
 
-// ------------ DOWNLOAD (SAFE, EXTERNAL) ------------
+// ------------ DOWNLOAD (SAFE, EXTERNAL, GUARANTEED) ------------
 if (downloadBtn) {
   downloadBtn.addEventListener("click", () => {
-    if (!currentVideo) return;
-    const ytUrl = `https://www.youtube.com/watch?v=${currentVideo.id}`;
+    let videoId = null;
+
+    // Primary source
+    if (currentVideo && currentVideo.id) {
+      videoId = currentVideo.id;
+    }
+
+    // Fallback (from popup player iframe)
+    if (!videoId && popupPlayer && popupReady) {
+      try {
+        videoId = popupPlayer.getVideoData().video_id;
+      } catch (e) {}
+    }
+
+    if (!videoId) {
+      alert("Video not ready yet. Please try again.");
+      return;
+    }
+
+    const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    // Redirect to external downloader
     window.open(
       "https://y2mate.nu/en/search?query=" + encodeURIComponent(ytUrl),
       "_blank"
