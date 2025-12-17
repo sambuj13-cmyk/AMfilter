@@ -1054,4 +1054,13 @@ body.modal-open {
   color: var(--muted);
   text-align: center;
 }
+/* -------- INPUT FOCUS SAFETY FIX -------- */
+input,
+select,
+textarea {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 5;
+}
+
 
