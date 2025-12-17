@@ -1,4 +1,40 @@
-// ------------ DOM ELEMENTS ------------
+// ================= INTRO + SOUND (3D INTRO EXIT) =================
+window.addEventListener("load", () => {
+  const intro = document.getElementById("intro");
+
+  if (!intro) return;
+
+  setTimeout(() => {
+    intro.style.transition = "opacity 0.9s ease, transform 0.9s ease";
+    intro.style.opacity = "0";
+    intro.style.transform = "scale(1.05)";
+
+    setTimeout(() => {
+      intro.remove();
+    }, 900);
+  }, 2200);
+});
+
+// Opening sound (browser-safe)
+const openSound = document.getElementById("openSound");
+let soundPlayed = false;
+
+document.addEventListener("click", () => {
+  if (!soundPlayed && openSound) {
+    openSound.play().catch(() => {});
+    soundPlayed = true;
+  }
+}, { once: true });
+
+
+// ================= API BASE (LOCAL vs VERCEL) =================
+const API_BASE =
+  location.hostname === "localhost" || location.hostname === "127.0.0.1"
+    ? "https://amfilter.vercel.app"
+    : "";
+
+
+// ================= DOM ELEMENTS =================
 const keywordInput = document.getElementById("keyword");
 const ratingSelect = document.getElementById("rating");
 const contentTypeSelect = document.getElementById("contentType");
@@ -9,7 +45,7 @@ const errorInfoEl = document.getElementById("errorInfo");
 const loaderEl = document.getElementById("loader");
 const themeToggleBtn = document.getElementById("themeToggle");
 
-// Popup elements
+// Popup
 const playerModal = document.getElementById("playerModal");
 const modalCloseBtn = document.getElementById("modalCloseBtn");
 const modalTitleEl = document.getElementById("modalTitle");
@@ -18,7 +54,7 @@ const modalDescriptionEl = document.getElementById("modalDescription");
 const descriptionToggleBtn = document.getElementById("descriptionToggle");
 const modalRecommendationsEl = document.getElementById("modalRecommendations");
 
-// NEW: popup next/prev buttons
+// Navigation buttons
 const nextVideoBtn = document.getElementById("nextVideoBtn");
 const prevVideoBtn = document.getElementById("prevVideoBtn");
 
@@ -28,12 +64,11 @@ const miniTitleEl = document.getElementById("miniTitle");
 const miniPlayPauseBtn = document.getElementById("miniPlayPauseBtn");
 const miniExpandBtn = document.getElementById("miniExpandBtn");
 const miniCloseBtn = document.getElementById("miniCloseBtn");
-
-// NEW: mini next/prev buttons
 const miniNextBtn = document.getElementById("miniNextBtn");
 const miniPrevBtn = document.getElementById("miniPrevBtn");
 
-// ------------ STATE ------------
+
+// ================= STATE =================
 let currentQuery = "";
 let currentRating = "all";
 let currentContentType = "all";
@@ -41,15 +76,16 @@ let nextPageToken = null;
 let isLoading = false;
 let lastFetchedItems = [];
 let currentVideo = null;
-let currentVideoIndex = -1; // NEW: track index in lastFetchedItems
+let currentVideoIndex = -1;
 
-// YT players
+// YT Players
 let popupPlayer = null;
 let miniPlayer = null;
 let popupReady = false;
 let miniReady = false;
 
-// ------------ THEME ------------
+
+// ================= THEME =================
 function applyTheme(theme) {
   document.body.setAttribute("data-theme", theme);
   themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀️";
@@ -62,8 +98,8 @@ themeToggleBtn.addEventListener("click", () => {
   applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
 });
 
-// ------------ PLAYLIST HELPERS (NEW) ------------
 
+// ================= PLAYLIST HELPERS =================
 function syncIndexFromCurrentVideo() {
   if (!currentVideo) return;
   const idx = lastFetchedItems.findIndex(v => v.id.videoId === currentVideo.id);
@@ -82,38 +118,26 @@ function playByIndex(index, mode = "popup") {
   };
   currentVideo = video;
 
-  if (mode === "mini") {
-    openInMiniPlayer(video);
-  } else {
-    openPlayerModal(video, { fromMini: false });
-  }
+  mode === "mini" ? openInMiniPlayer(video) : openPlayerModal(video);
 }
 
 function playNext(mode = "popup") {
   if (!lastFetchedItems.length) return;
   if (currentVideoIndex === -1) syncIndexFromCurrentVideo();
-  if (currentVideoIndex === -1) return;
-
-  let nextIndex = currentVideoIndex + 1;
-  if (nextIndex >= lastFetchedItems.length) {
-    nextIndex = 0; // loop back to start
-  }
-  playByIndex(nextIndex, mode);
+  playByIndex((currentVideoIndex + 1) % lastFetchedItems.length, mode);
 }
 
 function playPrev(mode = "popup") {
   if (!lastFetchedItems.length) return;
   if (currentVideoIndex === -1) syncIndexFromCurrentVideo();
-  if (currentVideoIndex === -1) return;
-
-  let prevIndex = currentVideoIndex - 1;
-  if (prevIndex < 0) {
-    prevIndex = lastFetchedItems.length - 1; // loop to last
-  }
-  playByIndex(prevIndex, mode);
+  playByIndex(
+    (currentVideoIndex - 1 + lastFetchedItems.length) % lastFetchedItems.length,
+    mode
+  );
 }
 
-// ------------ RENDER VIDEOS ------------
+
+// ================= RENDER VIDEOS =================
 function renderVideos(items, append = false) {
   if (!append) videoListEl.innerHTML = "";
 
@@ -128,8 +152,8 @@ function renderVideos(items, append = false) {
       <div class="video-body">
         <a class="video-title">${s.title}</a>
         <div class="video-meta">
-            <span>${s.channelTitle}</span>
-            <span>${new Date(s.publishedAt).toLocaleDateString()}</span>
+          <span>${s.channelTitle}</span>
+          <span>${new Date(s.publishedAt).toLocaleDateString()}</span>
         </div>
         <span class="badge">${
           currentContentType === "shorts" ? "Short" :
@@ -139,10 +163,9 @@ function renderVideos(items, append = false) {
     `;
 
     card.addEventListener("click", () => {
-      // find index in the global list, then play via playlist logic
       const idx = lastFetchedItems.findIndex(v => v.id.videoId === id);
-      const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
       if (idx !== -1) {
+        const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
         playByIndex(idx, mode);
       }
     });
@@ -151,13 +174,10 @@ function renderVideos(items, append = false) {
   });
 }
 
-// ------------ FETCH VIDEOS (via backend) ------------
+
+// ================= FETCH VIDEOS =================
 async function fetchVideos({ append = false } = {}) {
-  if (!currentQuery) {
-    errorInfoEl.textContent = "Please enter a keyword.";
-    return;
-  }
-  if (isLoading) return;
+  if (!currentQuery || isLoading) return;
 
   isLoading = true;
   loaderEl.classList.remove("hidden");
@@ -166,67 +186,33 @@ async function fetchVideos({ append = false } = {}) {
   const params = new URLSearchParams({
     q: currentQuery,
     rating: currentRating,
-    contentType: currentContentType,
+    contentType: currentContentType
   });
 
-  if (append && nextPageToken) {
-    params.append("pageToken", nextPageToken);
-  }
+  if (append && nextPageToken) params.append("pageToken", nextPageToken);
 
   try {
-    const url = `/api/search?${params.toString()}`;
-    console.log("Calling:", url);
-
-    const res = await fetch(url);
-    let data;
-
-    try {
-      data = await res.json();
-    } catch (e) {
-      console.error("Failed to parse JSON from /api/search:", e);
-      errorInfoEl.textContent = "Server returned invalid response.";
-      return;
-    }
+    const res = await fetch(`${API_BASE}/api/search?${params}`);
+    const data = await res.json();
 
     if (!res.ok) {
-      console.error("Backend /api/search error:", res.status, data);
-
-      let msg = "Error fetching videos.";
-      if (data && typeof data === "object") {
-        if (typeof data.error === "string") {
-          msg = data.error;
-        } else if (data.error && typeof data.error.message === "string") {
-          msg = data.error.message;
-        }
-      }
-
-      errorInfoEl.textContent = msg;
+      errorInfoEl.textContent = data.error || "Error fetching videos.";
       return;
     }
-
-    console.log("Search response:", data);
 
     nextPageToken = data.nextPageToken || null;
 
     if (!append) {
-      lastFetchedItems = Array.isArray(data.items) ? [...data.items] : [];
-      currentVideoIndex = -1; // reset playlist index on a fresh search
+      lastFetchedItems = [...data.items];
+      currentVideoIndex = -1;
     } else {
-      if (Array.isArray(data.items)) {
-        lastFetchedItems.push(...data.items);
-      }
-    }
-
-    if (!Array.isArray(data.items) || data.items.length === 0) {
-      resultInfoEl.textContent = "No videos found for this search.";
-      return;
+      lastFetchedItems.push(...data.items);
     }
 
     renderVideos(data.items, append);
     resultInfoEl.textContent = `Showing ${videoListEl.children.length} videos`;
   } catch (err) {
-    console.error("Fetch failed:", err);
-    errorInfoEl.textContent = err.message || "Error fetching videos.";
+    errorInfoEl.textContent = "Server error.";
   } finally {
     loaderEl.classList.add("hidden");
     isLoading = false;
@@ -234,67 +220,45 @@ async function fetchVideos({ append = false } = {}) {
 }
 
 
-
-// ------------ YT API READY ------------
-function onPopupPlayerStateChange(event) {
-  if (event.data === YT.PlayerState.ENDED) {
-    // autoplay next in popup mode
-    playNext("popup");
-  }
+// ================= YOUTUBE PLAYER =================
+function onPopupPlayerStateChange(e) {
+  if (e.data === YT.PlayerState.ENDED) playNext("popup");
+}
+function onMiniPlayerStateChange(e) {
+  if (e.data === YT.PlayerState.ENDED) playNext("mini");
 }
 
-function onMiniPlayerStateChange(event) {
-  if (event.data === YT.PlayerState.ENDED) {
-    // autoplay next in mini mode
-    playNext("mini");
-  }
-}
-
-window.onYouTubeIframeAPIReady = function () {
+window.onYouTubeIframeAPIReady = () => {
   popupPlayer = new YT.Player("popupPlayer", {
-    playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
-    events: {
-      onReady: () => (popupReady = true),
-      onStateChange: onPopupPlayerStateChange
-    }
+    playerVars: { autoplay: 0, controls: 1 },
+    events: { onReady: () => popupReady = true, onStateChange: onPopupPlayerStateChange }
   });
 
   miniPlayer = new YT.Player("miniPlayerFrame", {
-    playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
-    events: {
-      onReady: () => (miniReady = true),
-      onStateChange: onMiniPlayerStateChange
-    }
+    playerVars: { autoplay: 0, controls: 1 },
+    events: { onReady: () => miniReady = true, onStateChange: onMiniPlayerStateChange }
   });
 };
 
-// ------------ MINI PLAYER OPEN ------------
+
+// ================= PLAYERS =================
 function openInMiniPlayer(video) {
   if (!miniReady) return;
-
-  if (popupPlayer && popupReady) {
-    popupPlayer.stopVideo();
-  }
-
+  popupPlayer?.stopVideo();
   currentVideo = video;
+
   miniTitleEl.textContent = video.title;
   miniPlayerBox.classList.remove("hidden");
   playerModal.classList.add("hidden");
 
-  miniPlayer.loadVideoById({ videoId: video.id, startSeconds: 0 });
+  miniPlayer.loadVideoById(video.id);
   miniPlayer.playVideo();
   miniPlayPauseBtn.textContent = "⏸";
 }
 
-// ------------ POPUP OPEN ------------
-function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying = true } = {}) {
+function openPlayerModal(video) {
   if (!popupReady) return;
-
-  if (miniPlayer && miniReady) {
-    miniPlayer.stopVideo();
-  }
-
-  const isNew = !currentVideo || currentVideo.id !== video.id;
+  miniPlayer?.stopVideo();
   currentVideo = video;
 
   miniPlayerBox.classList.add("hidden");
@@ -303,195 +267,63 @@ function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying =
   modalTitleEl.textContent = video.title;
   modalChannelEl.textContent = video.channel;
 
-  const startTime = (fromMini && !isNew) ? resumeTime : 0;
+  popupPlayer.loadVideoById(video.id);
 
-  popupPlayer.loadVideoById({
-    videoId: video.id,
-    startSeconds: startTime
-  });
-
-  if (fromMini && !wasPlaying) {
-    popupPlayer.pauseVideo();
-  }
-
-  // Load description via backend
   modalDescriptionEl.textContent = "Loading...";
-  fetch(`/api/videoDetails?id=${encodeURIComponent(video.id)}`)
+  fetch(`${API_BASE}/api/videoDetails?id=${video.id}`)
     .then(r => r.json())
     .then(d => {
-      if (d.error) {
-        modalDescriptionEl.textContent = "Failed to load description.";
-        return;
-      }
       modalDescriptionEl.textContent =
-        d.items?.[0]?.snippet?.description ?? "No description available.";
+        d.items?.[0]?.snippet?.description || "No description available.";
     })
-    .catch(() => {
-      modalDescriptionEl.textContent = "Failed to load description.";
-    });
+    .catch(() => modalDescriptionEl.textContent = "Failed to load description.");
 
   renderModalRecommendations(video.id);
 }
 
-// ------------ POPUP CLOSE ------------
-function closePlayerModal() {
-  if (!currentVideo) return;
 
-  const t = popupPlayer.getCurrentTime() || 0;
-  const isPlaying = popupPlayer.getPlayerState() === YT.PlayerState.PLAYING;
-
-  popupPlayer.stopVideo();
-
-  miniTitleEl.textContent = currentVideo.title;
-  miniPlayerBox.classList.remove("hidden");
-
-  miniPlayer.loadVideoById({ videoId: currentVideo.id, startSeconds: t });
-
-  if (isPlaying) {
-    miniPlayer.playVideo();
-    miniPlayPauseBtn.textContent = "⏸";
-  } else {
-    miniPlayer.pauseVideo();
-    miniPlayPauseBtn.textContent = "▶";
-  }
-
-  playerModal.classList.add("hidden");
-}
-
-// ------------ RECOMMENDATIONS ------------
-function renderModalRecommendations(currentVideoId) {
-  modalRecommendationsEl.innerHTML = "";
-
-  const index = lastFetchedItems.findIndex(v => v.id.videoId === currentVideoId);
-  const next = lastFetchedItems.slice(index + 1, index + 10);
-
-  next.forEach(item => {
-    const vid = {
-      id: item.id.videoId,
-      title: item.snippet.title,
-      channel: item.snippet.channelTitle
-    };
-
-    const card = document.createElement("div");
-    card.className = "modal-rec-card";
-
-    card.innerHTML = `
-      <img class="modal-rec-thumb" src="${item.snippet.thumbnails.default.url}">
-      <div>
-        <div class="modal-rec-title">${vid.title}</div>
-        <div class="modal-rec-channel">${vid.channel}</div>
-      </div>
-    `;
-
-    card.addEventListener("click", () => {
-      const idx = lastFetchedItems.findIndex(v => v.id.videoId === vid.id);
-      const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
-      if (idx !== -1) {
-        playByIndex(idx, mode);
-      }
-    });
-
-    modalRecommendationsEl.appendChild(card);
-  });
-
-  if (!next.length) {
-    const empty = document.createElement("div");
-    empty.className = "modal-empty";
-    empty.textContent = "No more videos in this search.";
-    modalRecommendationsEl.appendChild(empty);
-  }
-}
-
-// ------------ EVENT HANDLERS ------------
-
-// ENTER to search
-keywordInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    currentQuery = keywordInput.value.trim();
-    currentRating = ratingSelect.value;
-    currentContentType = contentTypeSelect.value;
-    nextPageToken = null;
-    fetchVideos({ append: false });
-  }
-});
-
-// Button search
+// ================= EVENTS =================
 filterBtn.addEventListener("click", () => {
   currentQuery = keywordInput.value.trim();
   currentRating = ratingSelect.value;
   currentContentType = contentTypeSelect.value;
   nextPageToken = null;
-  fetchVideos({ append: false });
+  fetchVideos();
 });
 
-// Infinite scroll
+keywordInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") filterBtn.click();
+});
+
 window.addEventListener("scroll", () => {
-  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) {
+  if (window.innerHeight + scrollY >= document.body.offsetHeight - 400) {
     if (nextPageToken && !isLoading) fetchVideos({ append: true });
   }
 });
 
-// Popup close
-modalCloseBtn.addEventListener("click", closePlayerModal);
-
-// Backdrop close
-playerModal.addEventListener("click", e => {
-  if (e.target.classList.contains("player-modal-backdrop")) closePlayerModal();
+modalCloseBtn.addEventListener("click", () => {
+  popupPlayer?.stopVideo();
+  playerModal.classList.add("hidden");
 });
 
-// Mini close
 miniCloseBtn.addEventListener("click", () => {
-  if (miniPlayer && miniReady) {
-    miniPlayer.stopVideo();
-  }
+  miniPlayer?.stopVideo();
   miniPlayerBox.classList.add("hidden");
 });
 
-// Mini play/pause
 miniPlayPauseBtn.addEventListener("click", () => {
-  const st = miniPlayer.getPlayerState();
-  if (st === YT.PlayerState.PLAYING) {
-    miniPlayer.pauseVideo();
-    miniPlayPauseBtn.textContent = "▶";
-  } else {
-    miniPlayer.playVideo();
-    miniPlayPauseBtn.textContent = "⏸";
-  }
+  miniPlayer.getPlayerState() === YT.PlayerState.PLAYING
+    ? (miniPlayer.pauseVideo(), miniPlayPauseBtn.textContent = "▶")
+    : (miniPlayer.playVideo(), miniPlayPauseBtn.textContent = "⏸");
 });
 
-// Mini expand → popup
-miniExpandBtn.addEventListener("click", () => {
-  const time = miniPlayer.getCurrentTime();
-  const playing = miniPlayer.getPlayerState() === YT.PlayerState.PLAYING;
+nextVideoBtn.addEventListener("click", () => playNext("popup"));
+prevVideoBtn.addEventListener("click", () => playPrev("popup"));
+miniNextBtn.addEventListener("click", () => playNext("mini"));
+miniPrevBtn.addEventListener("click", () => playPrev("mini"));
 
-  openPlayerModal(currentVideo, {
-    fromMini: true,
-    resumeTime: time,
-    wasPlaying: playing
-  });
-});
-
-// Description expand
 descriptionToggleBtn.addEventListener("click", () => {
-  const expanded = modalDescriptionEl.classList.toggle("expanded");
-  descriptionToggleBtn.textContent = expanded ? "Show less ▲" : "Show more ▼";
+  modalDescriptionEl.classList.toggle("expanded");
 });
 
-// NEW: Popup next/prev buttons
-nextVideoBtn.addEventListener("click", () => {
-  playNext("popup");
-});
-prevVideoBtn.addEventListener("click", () => {
-  playPrev("popup");
-});
-
-// NEW: Mini next/prev buttons
-miniNextBtn.addEventListener("click", () => {
-  playNext("mini");
-});
-miniPrevBtn.addEventListener("click", () => {
-  playPrev("mini");
-});
-
-// Init
 initTheme();
