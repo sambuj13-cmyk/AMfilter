@@ -8,15 +8,14 @@
 </head>
 
 <body>
+
 <!-- INTRO SCREEN -->
 <div id="intro">
   <div class="intro-3d">
     <div class="intro-bg-text">AMFILTER</div>
-
     <div class="shape-wrapper">
       <div class="floating-shape"></div>
     </div>
-
     <div class="intro-center">
       <h1 class="intro-logo">AMFILTER</h1>
       <p class="intro-tagline">Clean your YouTube experience</p>
@@ -24,94 +23,97 @@
   </div>
 </div>
 
+<!-- OPENING SOUND -->
+<audio id="openSound" src="startup.mp3" preload="auto"></audio>
 
-  <!-- OPENING SOUND -->
-  <audio id="openSound" src="startup.mp3" preload="auto"></audio>
+<!-- BACKGROUND -->
+<div class="bg-blobs">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+</div>
 
-  <!-- Background blobs -->
-  <div class="bg-blobs">
-    <div class="blob blob1"></div>
-    <div class="blob blob2"></div>
+<div class="logo-bg-text">AMFILTER</div>
+
+<header class="header">
+  <div class="brand">
+    <img src="logo.png" class="brand-image" />
+    <div class="brand-text">
+      <div class="brand-name">AMFilter</div>
+      <div class="brand-tagline">Clean & customize your YouTube feed</div>
+    </div>
   </div>
 
-  <div class="logo-bg-text">AMFILTER</div>
+  <div class="header-right">
+    <a href="https://www.instagram.com/justbeingambuj" target="_blank" class="icon-btn">
+      <img src="insta.jpg" class="social-icon" />
+    </a>
+    <a href="https://github.com/sambuj13-cmyk/AMfilter" target="_blank" class="icon-btn">
+      <img src="github.jpg" class="social-icon" />
+    </a>
+    <button id="themeToggle" class="theme-toggle">🌙</button>
+  </div>
+</header>
 
-  <header class="header">
-    <div class="brand">
-      <img src="logo.png" alt="AMFilter Logo" class="brand-image" />
-      <div class="brand-text">
-        <div class="brand-name">AMFilter</div>
-        <div class="brand-tagline">Clean & customize your YouTube feed</div>
-      </div>
+<main class="container">
+
+  <!-- FILTER -->
+  <section class="filter-box">
+    <h2 class="section-title">Search & Filter</h2>
+    <div class="filter-row">
+      <input id="keyword" placeholder="e.g. study, gaming, lofi" />
+      <select id="rating">
+        <option value="all">All</option>
+        <option value="PG">PG</option>
+      </select>
+      <select id="contentType">
+        <option value="all">All</option>
+        <option value="shorts">Shorts</option>
+        <option value="videos">Videos</option>
+      </select>
+      <button id="filterBtn">Search</button>
     </div>
+  </section>
 
-    <div class="header-right">
-      <a href="https://www.instagram.com/justbeingambuj" target="_blank" class="icon-btn">
-        <img src="insta.jpg" class="social-icon" />
-      </a>
-      <a href="https://github.com/sambuj13-cmyk/AMfilter" target="_blank" class="icon-btn">
-        <img src="github.jpg" class="social-icon" />
-      </a>
-      <button id="themeToggle" class="theme-toggle">🌙</button>
+  <!-- RESULTS -->
+  <section class="results-section">
+    <div class="results-header">
+      <h2 class="section-title">Results</h2>
+      <span id="resultInfo"></span>
+      <span id="errorInfo"></span>
     </div>
-  </header>
+    <div id="videoList" class="video-list"></div>
+    <div id="loader" class="loader hidden">Loading…</div>
+  </section>
 
-  <main class="container">
-    <section class="filter-box">
-      <h2 class="section-title">Search & Filter</h2>
+</main>
 
-      <div class="filter-row">
-        <div class="field-group small">
-          <label>Keyword</label>
-          <input id="keyword" placeholder="e.g. study, gaming, lofi" />
-        </div>
+<footer class="footer">Made by Ambuj • AMFilter</footer>
 
-        <div class="field-group tiny">
-          <label>Safety</label>
-          <select id="rating">
-            <option value="all">All</option>
-            <option value="PG">PG</option>
-          </select>
-        </div>
+<!-- ================= POPUP PLAYER ================= -->
+<div id="playerModal" class="hidden">
+  <button id="modalCloseBtn">✕</button>
+  <h3 id="modalTitle"></h3>
+  <p id="modalChannel"></p>
+  <div id="popupPlayer"></div>
+  <p id="modalDescription"></p>
+  <button id="descriptionToggle">More</button>
+</div>
 
-        <div class="field-group tiny">
-          <label>Type</label>
-          <select id="contentType">
-            <option value="all">All</option>
-            <option value="shorts">Shorts</option>
-            <option value="videos">Videos</option>
-          </select>
-        </div>
+<!-- ================= MINI PLAYER ================= -->
+<div id="miniPlayer" class="hidden">
+  <div id="miniTitle"></div>
+  <div id="miniPlayerFrame"></div>
+  <button id="miniPlayPauseBtn">⏸</button>
+  <button id="miniPrevBtn">⏮</button>
+  <button id="miniNextBtn">⏭</button>
+  <button id="miniCloseBtn">✕</button>
+</div>
 
-        <div class="field-group tiny button-wrapper">
-          <button id="filterBtn">Search</button>
-        </div>
-      </div>
+<!-- ✅ LOAD YOUTUBE API FIRST -->
+<script src="https://www.youtube.com/iframe_api"></script>
 
-      <p class="hint-text">Tip: Use <b>PG</b> + <b>Shorts</b> for safer content.</p>
-    </section>
+<!-- ✅ THEN YOUR APP -->
+<script src="app.js"></script>
 
-    <section class="results-section">
-      <div class="results-header">
-        <h2 class="section-title">Results</h2>
-        <div class="results-meta">
-          <span id="resultInfo"></span>
-          <span id="errorInfo"></span>
-        </div>
-      </div>
-
-      <div id="videoList" class="video-list"></div>
-      <div id="loader" class="loader hidden">Loading more…</div>
-    </section>
-
-    <p class="disclaimer">
-      Downloads are handled by third-party services. AMFilter does not host or download videos.
-    </p>
-  </main>
-
-  <footer class="footer">Made by Ambuj • AMFilter</footer>
-
-  <script src="app.js"></script>
-  <script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
