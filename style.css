@@ -921,72 +921,108 @@ body.modal-open {
     overflow-y: auto;
     white-space: pre-line;
 }
-/* ================= INTRO SCREEN ================= */
+/* ---------- 3D INTRO ANIMATION ---------- */
 
 #intro {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: radial-gradient(circle at top, #020617, #000);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at top, #020617, #000);
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: none; /* allows clicks to pass once faded */
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
 .intro-3d {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    perspective: 1000px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Big background text */
 .intro-bg-text {
-    position: absolute;
-    font-size: clamp(80px, 18vw, 180px);
-    font-weight: 900;
-    letter-spacing: 0.35em;
-    color: rgba(255, 255, 255, 0.04);
-    pointer-events: none;
+  position: absolute;
+  font-size: clamp(100px, 22vw, 260px);
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: rgba(255, 255, 255, 0.035);
+  transform: translateZ(-300px);
+  animation: bgFloat 6s ease-in-out infinite;
+  pointer-events: none;
 }
 
+/* Center text */
 .intro-center {
-    text-align: center;
-    z-index: 2;
+  text-align: center;
+  transform-style: preserve-3d;
+  animation: popIn 1.4s ease forwards;
 }
 
 .intro-logo {
-    font-size: clamp(42px, 8vw, 72px);
-    font-weight: 800;
-    letter-spacing: 0.12em;
+  font-size: 48px;
+  letter-spacing: 4px;
+  color: white;
 }
 
 .intro-tagline {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #9ca3af;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #9ca3af;
 }
 
-/* Floating glow */
+/* Floating 3D shape */
 .shape-wrapper {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  transform-style: preserve-3d;
+  animation: shapeFloat 5s ease-in-out infinite;
 }
 
 .floating-shape {
-    width: 180px;
-    height: 180px;
-    border-radius: 999px;
-    background: radial-gradient(circle, #3b82f6, #0ea5e9);
-    filter: blur(40px);
-    opacity: 0.45;
-    animation: floatSlow 6s ease-in-out infinite;
+  width: 100%;
+  height: 100%;
+  border-radius: 32px;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.6),
+    rgba(236, 72, 153, 0.6)
+  );
+  box-shadow:
+    0 0 40px rgba(59, 130, 246, 0.4),
+    inset 0 0 40px rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  transform: rotateX(25deg) rotateY(35deg);
+}
+
+/* Animations */
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateZ(120px) scale(0.85);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateZ(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes shapeFloat {
+  0% { transform: translateY(0) rotateX(20deg) rotateY(30deg); }
+  50% { transform: translateY(-20px) rotateX(30deg) rotateY(50deg); }
+  100% { transform: translateY(0) rotateX(20deg) rotateY(30deg); }
+}
+
+@keyframes bgFloat {
+  0% { transform: translateZ(-300px) translateY(0); }
+  50% { transform: translateZ(-300px) translateY(-10px); }
+  100% { transform: translateZ(-300px) translateY(0); }
 }
 
 @keyframes floatSlow {
