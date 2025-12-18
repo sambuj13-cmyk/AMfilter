@@ -1,145 +1,138 @@
-// INTRO
-window.addEventListener("load", () => {
-  const intro = document.getElementById("intro");
-  setTimeout(() => {
-    intro.style.opacity = "0";
-    setTimeout(() => intro.remove(), 900);
-  }, 2200);
-});
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AMFilter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
 
-// SOUND
-const openSound = document.getElementById("openSound");
-document.addEventListener("click", () => {
-  openSound?.play().catch(() => {});
-}, { once: true });
+<body>
 
-// DOM
-const keywordInput = document.getElementById("keyword");
-const filterBtn = document.getElementById("filterBtn");
-const videoList = document.getElementById("videoList");
-const loader = document.getElementById("loader");
-const themeToggle = document.getElementById("themeToggle");
+<!-- INTRO -->
+<div id="intro">
+  <div class="intro-3d">
+    <div class="intro-bg-text">AMFILTER</div>
+    <div class="shape-wrapper">
+      <div class="floating-shape"></div>
+    </div>
+    <div class="intro-center">
+      <h1 class="intro-logo">AMFILTER</h1>
+      <p class="intro-tagline">Clean your YouTube experience</p>
+    </div>
+  </div>
+</div>
 
-const modal = document.getElementById("playerModal");
-const modalClose = document.getElementById("modalCloseBtn");
-const modalTitle = document.getElementById("modalTitle");
-const modalChannel = document.getElementById("modalChannel");
-const modalDesc = document.getElementById("modalDescription");
-const descToggle = document.getElementById("descriptionToggle");
-const recList = document.getElementById("modalRecommendations");
+<audio id="openSound" src="startup.mp3" preload="auto"></audio>
 
-const nextBtn = document.getElementById("nextVideoBtn");
-const prevBtn = document.getElementById("prevVideoBtn");
-const downloadBtn = document.getElementById("downloadBtn");
+<div class="bg-blobs">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+</div>
 
-// STATE
-let videos = [];
-let index = 0;
-let player;
+<div class="logo-bg-text">AMFILTER</div>
 
-// THEME
-themeToggle.onclick = () => {
-  const t = document.body.dataset.theme === "light" ? "dark" : "light";
-  document.body.dataset.theme = t;
-};
+<header class="header">
+  <div class="brand">
+    <img src="logo.png" class="brand-image" />
+    <div class="brand-text">
+      <div class="brand-name">AMFilter</div>
+      <div class="brand-tagline">Clean & customize your YouTube feed</div>
+    </div>
+  </div>
 
-// FETCH
-async function search() {
-  const q = keywordInput.value.trim();
-  if (!q) return;
+  <div class="header-right">
+    <a href="https://www.instagram.com/justbeingambuj" target="_blank" class="icon-btn">
+      <img src="insta.jpg" class="social-icon" />
+    </a>
+    <a href="https://github.com/sambuj13-cmyk/AMfilter" target="_blank" class="icon-btn">
+      <img src="github.jpg" class="social-icon" />
+    </a>
+    <button id="themeToggle" class="theme-toggle">🌙</button>
+  </div>
+</header>
 
-  loader.classList.remove("hidden");
-  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-  const data = await res.json();
-  videos = data.items;
-  render();
-  loader.classList.add("hidden");
-}
+<main class="container">
 
-// RENDER
-function render() {
-  videoList.innerHTML = "";
-  videos.forEach((v, i) => {
-    const card = document.createElement("div");
-    card.className = "video-card";
-    card.innerHTML = `
-      <img src="${v.snippet.thumbnails.medium.url}">
-      <div class="video-body">
-        <div class="video-title">${v.snippet.title}</div>
-        <div class="video-meta">${v.snippet.channelTitle}</div>
-      </div>`;
-    card.onclick = () => open(i);
-    videoList.appendChild(card);
-  });
-}
+<section class="filter-box">
+  <h2 class="section-title">Search & Filter</h2>
+  <div class="filter-row">
+    <div class="field-group small">
+      <label>Keyword</label>
+      <input id="keyword" placeholder="e.g. study, gaming, lofi" />
+    </div>
+    <div class="field-group tiny">
+      <label>Safety</label>
+      <select id="rating">
+        <option value="all">All</option>
+        <option value="PG">PG</option>
+      </select>
+    </div>
+    <div class="field-group tiny">
+      <label>Type</label>
+      <select id="contentType">
+        <option value="all">All</option>
+        <option value="shorts">Shorts</option>
+        <option value="videos">Videos</option>
+      </select>
+    </div>
+    <button id="filterBtn">Search</button>
+  </div>
+</section>
 
-// PLAYER
-window.onYouTubeIframeAPIReady = () => {
-  player = new YT.Player("popupPlayer");
-};
+<section class="results-section">
+  <h2 class="section-title">Results</h2>
+  <div id="videoList" class="video-list"></div>
+  <div id="loader" class="loader hidden">Loading...</div>
+</section>
 
-function open(i) {
-  index = i;
-  const v = videos[i];
+</main>
 
-  document.body.classList.add("modal-open");
-  modal.classList.remove("hidden");
+<footer class="footer">Made by Ambuj • AMFilter</footer>
 
-  modalTitle.textContent = v.snippet.title;
-  modalChannel.textContent = v.snippet.channelTitle;
-  modalDesc.textContent = "Loading...";
+<!-- POPUP PLAYER -->
+<div id="playerModal" class="player-modal hidden">
+  <div class="player-modal-backdrop"></div>
+  <div class="player-modal-content">
 
-  player.loadVideoById(v.id.videoId);
+    <button id="modalCloseBtn" class="modal-close-btn">✕ Close</button>
 
-  fetch(`/api/videoDetails?id=${v.id.videoId}`)
-    .then(r => r.json())
-    .then(d => modalDesc.textContent =
-      d.items?.[0]?.snippet?.description || "No description"
-    );
+    <div class="player-modal-main">
+      <div class="player-modal-left">
 
-  downloadBtn.onclick = () => {
-    const url = `https://www.youtube.com/watch?v=${v.id.videoId}`;
-    window.open(`https://yt1s.com/en?q=${encodeURIComponent(url)}`, "_blank");
-  };
+        <div class="player-frame-wrapper">
+          <div id="popupPlayer"></div>
+        </div>
 
-  renderRecs();
-}
+        <h2 id="modalTitle"></h2>
+        <p id="modalChannel"></p>
 
-// NAV
-nextBtn.onclick = () => index < videos.length - 1 && open(index + 1);
-prevBtn.onclick = () => index > 0 && open(index - 1);
+        <!-- ACTION BAR -->
+        <div class="player-actions">
+          <button id="prevVideoBtn" class="player-nav-btn">⟨ Prev</button>
+          <button id="nextVideoBtn" class="player-nav-btn">Next ⟩</button>
+          <button id="downloadBtn" class="download-btn">Download</button>
+        </div>
 
-// DESC
-descToggle.onclick = () => {
-  modalDesc.classList.toggle("expanded");
-  descToggle.textContent =
-    modalDesc.classList.contains("expanded")
-      ? "Show less ▲"
-      : "Show more ▼";
-};
+        <div class="description-header">
+          <span>Description</span>
+          <button id="descriptionToggle" class="description-toggle">Show more ▼</button>
+        </div>
 
-// RECS
-function renderRecs() {
-  recList.innerHTML = "";
-  videos.slice(0, 6).forEach((v, i) => {
-    if (i === index) return;
-    const d = document.createElement("div");
-    d.className = "modal-rec-card";
-    d.innerHTML = `
-      <img src="${v.snippet.thumbnails.default.url}">
-      <div>${v.snippet.title}</div>`;
-    d.onclick = () => open(i);
-    recList.appendChild(d);
-  });
-}
+        <div id="modalDescription" class="modal-description"></div>
+      </div>
 
-// CLOSE
-modalClose.onclick = () => {
-  modal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-  player.stopVideo();
-};
+      <aside class="player-modal-right">
+        <h3>More from this search</h3>
+        <div id="modalRecommendations" class="modal-rec-list"></div>
+      </aside>
+    </div>
 
-// SEARCH EVENTS
-filterBtn.onclick = search;
-keywordInput.onkeydown = e => e.key === "Enter" && search();
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
+
+</body>
+</html>
