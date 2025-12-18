@@ -1,138 +1,242 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>AMFilter</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="style.css" />
-</head>
+// ================= INTRO + OPENING SOUND =================
+window.addEventListener("load", () => {
+  const intro = document.getElementById("intro");
+  if (!intro) return;
 
-<body>
+  setTimeout(() => {
+    intro.style.opacity = "0";
+    intro.style.transform = "scale(1.05)";
+    setTimeout(() => intro.remove(), 900);
+  }, 2200);
+});
 
-<!-- INTRO -->
-<div id="intro">
-  <div class="intro-3d">
-    <div class="intro-bg-text">AMFILTER</div>
-    <div class="shape-wrapper">
-      <div class="floating-shape"></div>
-    </div>
-    <div class="intro-center">
-      <h1 class="intro-logo">AMFILTER</h1>
-      <p class="intro-tagline">Clean your YouTube experience</p>
-    </div>
-  </div>
-</div>
+// Opening sound (browser-safe)
+const openSound = document.getElementById("openSound");
+let soundPlayed = false;
+document.addEventListener("click", () => {
+  if (!soundPlayed && openSound) {
+    openSound.play().catch(() => {});
+    soundPlayed = true;
+  }
+}, { once: true });
 
-<audio id="openSound" src="startup.mp3" preload="auto"></audio>
+// ------------ DOM ELEMENTS ------------
+const keywordInput = document.getElementById("keyword");
+const ratingSelect = document.getElementById("rating");
+const contentTypeSelect = document.getElementById("contentType");
+const filterBtn = document.getElementById("filterBtn");
+const videoListEl = document.getElementById("videoList");
+const loaderEl = document.getElementById("loader");
+const themeToggleBtn = document.getElementById("themeToggle");
 
-<div class="bg-blobs">
-  <div class="blob blob1"></div>
-  <div class="blob blob2"></div>
-</div>
+const playerModal = document.getElementById("playerModal");
+const modalCloseBtn = document.getElementById("modalCloseBtn");
+const modalTitleEl = document.getElementById("modalTitle");
+const modalChannelEl = document.getElementById("modalChannel");
+const modalDescriptionEl = document.getElementById("modalDescription");
+const modalRecommendationsEl = document.getElementById("modalRecommendations");
 
-<div class="logo-bg-text">AMFILTER</div>
+const miniPlayerBox = document.getElementById("miniPlayer");
+const miniTitleEl = document.getElementById("miniTitle");
+const miniPlayPauseBtn = document.getElementById("miniPlayPauseBtn");
+const miniExpandBtn = document.getElementById("miniExpandBtn");
+const miniCloseBtn = document.getElementById("miniCloseBtn");
 
-<header class="header">
-  <div class="brand">
-    <img src="logo.png" class="brand-image" />
-    <div class="brand-text">
-      <div class="brand-name">AMFilter</div>
-      <div class="brand-tagline">Clean & customize your YouTube feed</div>
-    </div>
-  </div>
+// ------------ STATE ------------
+let currentQuery = "";
+let nextPageToken = null;
+let isLoading = false;
+let lastFetchedItems = [];
+let currentVideoIndex = -1;
+let currentVideo = null;
 
-  <div class="header-right">
-    <a href="https://www.instagram.com/justbeingambuj" target="_blank" class="icon-btn">
-      <img src="insta.jpg" class="social-icon" />
-    </a>
-    <a href="https://github.com/sambuj13-cmyk/AMfilter" target="_blank" class="icon-btn">
-      <img src="github.jpg" class="social-icon" />
-    </a>
-    <button id="themeToggle" class="theme-toggle">🌙</button>
-  </div>
-</header>
+let popupPlayer = null;
+let miniPlayer = null;
+let popupReady = false;
+let miniReady = false;
 
-<main class="container">
+// ------------ THEME ------------
+function applyTheme(theme) {
+  document.body.setAttribute("data-theme", theme);
+  themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀️";
+  localStorage.setItem("amfilter-theme", theme);
+}
+function initTheme() {
+  applyTheme(localStorage.getItem("amfilter-theme") === "light" ? "light" : "dark");
+}
+themeToggleBtn.addEventListener("click", () => {
+  applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
+});
 
-<section class="filter-box">
-  <h2 class="section-title">Search & Filter</h2>
-  <div class="filter-row">
-    <div class="field-group small">
-      <label>Keyword</label>
-      <input id="keyword" placeholder="e.g. study, gaming, lofi" />
-    </div>
-    <div class="field-group tiny">
-      <label>Safety</label>
-      <select id="rating">
-        <option value="all">All</option>
-        <option value="PG">PG</option>
-      </select>
-    </div>
-    <div class="field-group tiny">
-      <label>Type</label>
-      <select id="contentType">
-        <option value="all">All</option>
-        <option value="shorts">Shorts</option>
-        <option value="videos">Videos</option>
-      </select>
-    </div>
-    <button id="filterBtn">Search</button>
-  </div>
-</section>
+// ------------ RENDER VIDEOS ------------
+function renderVideos(items, append = false) {
+  if (!append) videoListEl.innerHTML = "";
 
-<section class="results-section">
-  <h2 class="section-title">Results</h2>
-  <div id="videoList" class="video-list"></div>
-  <div id="loader" class="loader hidden">Loading...</div>
-</section>
-
-</main>
-
-<footer class="footer">Made by Ambuj • AMFilter</footer>
-
-<!-- POPUP PLAYER -->
-<div id="playerModal" class="player-modal hidden">
-  <div class="player-modal-backdrop"></div>
-  <div class="player-modal-content">
-
-    <button id="modalCloseBtn" class="modal-close-btn">✕ Close</button>
-
-    <div class="player-modal-main">
-      <div class="player-modal-left">
-
-        <div class="player-frame-wrapper">
-          <div id="popupPlayer"></div>
+  items.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "video-card";
+    card.innerHTML = `
+      <img src="${item.snippet.thumbnails.medium.url}">
+      <div class="video-body">
+        <div class="video-title">${item.snippet.title}</div>
+        <div class="video-meta">
+          <span>${item.snippet.channelTitle}</span>
+          <span>${new Date(item.snippet.publishedAt).toLocaleDateString()}</span>
         </div>
-
-        <h2 id="modalTitle"></h2>
-        <p id="modalChannel"></p>
-
-        <!-- ACTION BAR -->
-        <div class="player-actions">
-          <button id="prevVideoBtn" class="player-nav-btn">⟨ Prev</button>
-          <button id="nextVideoBtn" class="player-nav-btn">Next ⟩</button>
-          <button id="downloadBtn" class="download-btn">Download</button>
-        </div>
-
-        <div class="description-header">
-          <span>Description</span>
-          <button id="descriptionToggle" class="description-toggle">Show more ▼</button>
-        </div>
-
-        <div id="modalDescription" class="modal-description"></div>
       </div>
+    `;
 
-      <aside class="player-modal-right">
-        <h3>More from this search</h3>
-        <div id="modalRecommendations" class="modal-rec-list"></div>
-      </aside>
-    </div>
+    card.addEventListener("click", () => {
+      currentVideoIndex = index;
+      openPlayerModal({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle
+      });
+    });
 
-  </div>
-</div>
+    videoListEl.appendChild(card);
+  });
+}
 
-<script src="app.js"></script>
-<script src="https://www.youtube.com/iframe_api"></script>
+// ------------ FETCH VIDEOS ------------
+async function fetchVideos({ append = false } = {}) {
+  if (!currentQuery || isLoading) return;
 
-</body>
-</html>
+  isLoading = true;
+  loaderEl.classList.remove("hidden");
+
+  const params = new URLSearchParams({ q: currentQuery });
+  if (append && nextPageToken) params.append("pageToken", nextPageToken);
+
+  const res = await fetch(`/api/search?${params}`);
+  const data = await res.json();
+
+  nextPageToken = data.nextPageToken || null;
+  lastFetchedItems = append ? [...lastFetchedItems, ...data.items] : data.items;
+
+  renderVideos(data.items, append);
+  loaderEl.classList.add("hidden");
+  isLoading = false;
+}
+
+// ------------ YT API ------------
+window.onYouTubeIframeAPIReady = function () {
+  popupPlayer = new YT.Player("popupPlayer", {
+    events: { onReady: () => popupReady = true }
+  });
+  miniPlayer = new YT.Player("miniPlayerFrame", {
+    events: { onReady: () => miniReady = true }
+  });
+};
+
+// ------------ POPUP OPEN ------------
+function openPlayerModal(video) {
+  if (!popupReady) return;
+
+  currentVideo = video;
+  document.body.classList.add("modal-open");
+  playerModal.classList.remove("hidden");
+
+  modalTitleEl.textContent = video.title;
+  modalChannelEl.textContent = video.channel;
+
+  popupPlayer.loadVideoById(video.id);
+
+  // -------- ACTION BAR (Prev | Next | Download) --------
+  let actions = document.getElementById("playerActions");
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.id = "playerActions";
+    actions.className = "player-actions";
+    modalChannelEl.after(actions);
+  }
+  actions.innerHTML = "";
+
+  const prevBtn = document.createElement("button");
+  prevBtn.className = "player-nav-btn";
+  prevBtn.textContent = "⟨ Prev";
+  prevBtn.onclick = () => playRelative(-1);
+
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "player-nav-btn";
+  nextBtn.textContent = "Next ⟩";
+  nextBtn.onclick = () => playRelative(1);
+
+  const downloadBtn = document.createElement("button");
+  downloadBtn.className = "download-btn";
+  downloadBtn.textContent = "Download Video";
+  downloadBtn.onclick = () => {
+    const ytUrl = `https://www.youtube.com/watch?v=${video.id}`;
+    window.open(
+      `https://www.y2mate.com/youtube/${encodeURIComponent(ytUrl)}`,
+      "_blank"
+    );
+  };
+
+  actions.append(prevBtn, nextBtn, downloadBtn);
+
+  renderRecommendations(video.id);
+}
+
+// ------------ PLAY NEXT / PREV ------------
+function playRelative(step) {
+  if (!lastFetchedItems.length) return;
+  currentVideoIndex =
+    (currentVideoIndex + step + lastFetchedItems.length) %
+    lastFetchedItems.length;
+
+  const item = lastFetchedItems[currentVideoIndex];
+  openPlayerModal({
+    id: item.id.videoId,
+    title: item.snippet.title,
+    channel: item.snippet.channelTitle
+  });
+}
+
+// ------------ RECOMMENDATIONS ------------
+function renderRecommendations(currentId) {
+  modalRecommendationsEl.innerHTML = "";
+  lastFetchedItems
+    .filter(v => v.id.videoId !== currentId)
+    .slice(0, 8)
+    .forEach(item => {
+      const div = document.createElement("div");
+      div.className = "modal-rec-card";
+      div.innerHTML = `
+        <img class="modal-rec-thumb" src="${item.snippet.thumbnails.default.url}">
+        <div>
+          <div class="modal-rec-title">${item.snippet.title}</div>
+          <div class="modal-rec-channel">${item.snippet.channelTitle}</div>
+        </div>
+      `;
+      div.onclick = () => openPlayerModal({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle
+      });
+      modalRecommendationsEl.appendChild(div);
+    });
+}
+
+// ------------ CLOSE POPUP ------------
+modalCloseBtn.addEventListener("click", () => {
+  popupPlayer.stopVideo();
+  playerModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+});
+
+// ------------ SEARCH EVENTS ------------
+keywordInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    currentQuery = keywordInput.value.trim();
+    fetchVideos();
+  }
+});
+filterBtn.addEventListener("click", () => {
+  currentQuery = keywordInput.value.trim();
+  fetchVideos();
+});
+
+// Init
+initTheme(); this is my current app.js
