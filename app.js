@@ -10,6 +10,7 @@ window.addEventListener("load", () => {
   }, 2200);
 });
 
+// Opening sound (browser-safe)
 const openSound = document.getElementById("openSound");
 let soundPlayed = false;
 document.addEventListener("click", () => {
@@ -25,8 +26,6 @@ const ratingSelect = document.getElementById("rating");
 const contentTypeSelect = document.getElementById("contentType");
 const filterBtn = document.getElementById("filterBtn");
 const videoListEl = document.getElementById("videoList");
-const resultInfoEl = document.getElementById("resultInfo");
-const errorInfoEl = document.getElementById("errorInfo");
 const loaderEl = document.getElementById("loader");
 const themeToggleBtn = document.getElementById("themeToggle");
 
@@ -35,29 +34,21 @@ const modalCloseBtn = document.getElementById("modalCloseBtn");
 const modalTitleEl = document.getElementById("modalTitle");
 const modalChannelEl = document.getElementById("modalChannel");
 const modalDescriptionEl = document.getElementById("modalDescription");
-const descriptionToggleBtn = document.getElementById("descriptionToggle");
 const modalRecommendationsEl = document.getElementById("modalRecommendations");
-
-const nextVideoBtn = document.getElementById("nextVideoBtn");
-const prevVideoBtn = document.getElementById("prevVideoBtn");
 
 const miniPlayerBox = document.getElementById("miniPlayer");
 const miniTitleEl = document.getElementById("miniTitle");
 const miniPlayPauseBtn = document.getElementById("miniPlayPauseBtn");
 const miniExpandBtn = document.getElementById("miniExpandBtn");
 const miniCloseBtn = document.getElementById("miniCloseBtn");
-const miniNextBtn = document.getElementById("miniNextBtn");
-const miniPrevBtn = document.getElementById("miniPrevBtn");
 
 // ------------ STATE ------------
 let currentQuery = "";
-let currentRating = "all";
-let currentContentType = "all";
 let nextPageToken = null;
 let isLoading = false;
 let lastFetchedItems = [];
-let currentVideo = null;
 let currentVideoIndex = -1;
+let currentVideo = null;
 
 let popupPlayer = null;
 let miniPlayer = null;
@@ -77,45 +68,31 @@ themeToggleBtn.addEventListener("click", () => {
   applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
 });
 
-// ------------ PLAYLIST HELPERS ------------
-function playByIndex(index, mode = "popup") {
-  const item = lastFetchedItems[index];
-  if (!item) return;
-
-  currentVideoIndex = index;
-  currentVideo = {
-    id: item.id.videoId,
-    title: item.snippet.title,
-    channel: item.snippet.channelTitle
-  };
-
-  mode === "mini"
-    ? openInMiniPlayer(currentVideo)
-    : openPlayerModal(currentVideo);
-}
-
 // ------------ RENDER VIDEOS ------------
 function renderVideos(items, append = false) {
   if (!append) videoListEl.innerHTML = "";
 
-  items.forEach(item => {
+  items.forEach((item, index) => {
     const card = document.createElement("div");
     card.className = "video-card";
     card.innerHTML = `
       <img src="${item.snippet.thumbnails.medium.url}">
       <div class="video-body">
-        <a class="video-title">${item.snippet.title}</a>
+        <div class="video-title">${item.snippet.title}</div>
         <div class="video-meta">
           <span>${item.snippet.channelTitle}</span>
           <span>${new Date(item.snippet.publishedAt).toLocaleDateString()}</span>
         </div>
-        <span class="badge">YouTube</span>
       </div>
     `;
 
     card.addEventListener("click", () => {
-      const idx = lastFetchedItems.findIndex(v => v.id.videoId === item.id.videoId);
-      playByIndex(idx);
+      currentVideoIndex = index;
+      openPlayerModal({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle
+      });
     });
 
     videoListEl.appendChild(card);
@@ -124,17 +101,12 @@ function renderVideos(items, append = false) {
 
 // ------------ FETCH VIDEOS ------------
 async function fetchVideos({ append = false } = {}) {
-  if (!currentQuery) return;
+  if (!currentQuery || isLoading) return;
 
   isLoading = true;
   loaderEl.classList.remove("hidden");
 
-  const params = new URLSearchParams({
-    q: currentQuery,
-    rating: currentRating,
-    contentType: currentContentType
-  });
-
+  const params = new URLSearchParams({ q: currentQuery });
   if (append && nextPageToken) params.append("pageToken", nextPageToken);
 
   const res = await fetch(`/api/search?${params}`);
@@ -162,32 +134,96 @@ window.onYouTubeIframeAPIReady = function () {
 function openPlayerModal(video) {
   if (!popupReady) return;
 
+  currentVideo = video;
+  document.body.classList.add("modal-open");
   playerModal.classList.remove("hidden");
+
   modalTitleEl.textContent = video.title;
   modalChannelEl.textContent = video.channel;
 
   popupPlayer.loadVideoById(video.id);
 
-  // 🔥 DOWNLOAD BUTTON (SAFE REDIRECT)
-  let btn = document.getElementById("downloadBtn");
-  if (!btn) {
-    btn = document.createElement("button");
-    btn.id = "downloadBtn";
-    btn.className = "download-btn";
-    btn.textContent = "Download Video";
-    modalChannelEl.after(btn);
+  // -------- ACTION BAR (Prev | Next | Download) --------
+  let actions = document.getElementById("playerActions");
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.id = "playerActions";
+    actions.className = "player-actions";
+    modalChannelEl.after(actions);
   }
+  actions.innerHTML = "";
 
-  btn.onclick = () => {
+  const prevBtn = document.createElement("button");
+  prevBtn.className = "player-nav-btn";
+  prevBtn.textContent = "⟨ Prev";
+  prevBtn.onclick = () => playRelative(-1);
+
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "player-nav-btn";
+  nextBtn.textContent = "Next ⟩";
+  nextBtn.onclick = () => playRelative(1);
+
+  const downloadBtn = document.createElement("button");
+  downloadBtn.className = "download-btn";
+  downloadBtn.textContent = "Download Video";
+  downloadBtn.onclick = () => {
     const ytUrl = `https://www.youtube.com/watch?v=${video.id}`;
-    window.open(`https://en.savefrom.net/#url=${encodeURIComponent(ytUrl)}`, "_blank");
+    window.open(
+      `https://www.y2mate.com/youtube/${encodeURIComponent(ytUrl)}`,
+      "_blank"
+    );
   };
+
+  actions.append(prevBtn, nextBtn, downloadBtn);
+
+  renderRecommendations(video.id);
+}
+
+// ------------ PLAY NEXT / PREV ------------
+function playRelative(step) {
+  if (!lastFetchedItems.length) return;
+  currentVideoIndex =
+    (currentVideoIndex + step + lastFetchedItems.length) %
+    lastFetchedItems.length;
+
+  const item = lastFetchedItems[currentVideoIndex];
+  openPlayerModal({
+    id: item.id.videoId,
+    title: item.snippet.title,
+    channel: item.snippet.channelTitle
+  });
+}
+
+// ------------ RECOMMENDATIONS ------------
+function renderRecommendations(currentId) {
+  modalRecommendationsEl.innerHTML = "";
+  lastFetchedItems
+    .filter(v => v.id.videoId !== currentId)
+    .slice(0, 8)
+    .forEach(item => {
+      const div = document.createElement("div");
+      div.className = "modal-rec-card";
+      div.innerHTML = `
+        <img class="modal-rec-thumb" src="${item.snippet.thumbnails.default.url}">
+        <div>
+          <div class="modal-rec-title">${item.snippet.title}</div>
+          <div class="modal-rec-channel">${item.snippet.channelTitle}</div>
+        </div>
+      `;
+      div.onclick = () => openPlayerModal({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle
+      });
+      modalRecommendationsEl.appendChild(div);
+    });
 }
 
 // ------------ CLOSE POPUP ------------
 modalCloseBtn.addEventListener("click", () => {
   popupPlayer.stopVideo();
   playerModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
 });
 
 // ------------ SEARCH EVENTS ------------
@@ -202,4 +238,5 @@ filterBtn.addEventListener("click", () => {
   fetchVideos();
 });
 
+// Init
 initTheme();
