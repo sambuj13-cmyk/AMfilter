@@ -239,4 +239,4 @@ filterBtn.addEventListener("click", () => {
 });
 
 // Init
-initTheme(); this is my current app.js
+initTheme();
