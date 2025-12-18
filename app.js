@@ -1,204 +1,145 @@
-// ================= INTRO + OPENING SOUND =================
+// INTRO
 window.addEventListener("load", () => {
   const intro = document.getElementById("intro");
-  if (!intro) return;
-
   setTimeout(() => {
     intro.style.opacity = "0";
-    intro.style.transform = "scale(1.05)";
     setTimeout(() => intro.remove(), 900);
   }, 2200);
 });
 
+// SOUND
 const openSound = document.getElementById("openSound");
-let soundPlayed = false;
 document.addEventListener("click", () => {
-  if (!soundPlayed && openSound) {
-    openSound.play().catch(() => {});
-    soundPlayed = true;
-  }
+  openSound?.play().catch(() => {});
 }, { once: true });
 
-// ------------ DOM ELEMENTS ------------
+// DOM
 const keywordInput = document.getElementById("keyword");
 const filterBtn = document.getElementById("filterBtn");
-const videoListEl = document.getElementById("videoList");
-const loaderEl = document.getElementById("loader");
-const themeToggleBtn = document.getElementById("themeToggle");
+const videoList = document.getElementById("videoList");
+const loader = document.getElementById("loader");
+const themeToggle = document.getElementById("themeToggle");
 
-const playerModal = document.getElementById("playerModal");
-const modalCloseBtn = document.getElementById("modalCloseBtn");
-const modalTitleEl = document.getElementById("modalTitle");
-const modalChannelEl = document.getElementById("modalChannel");
-const modalDescriptionEl = document.getElementById("modalDescription");
-const descriptionToggleBtn = document.getElementById("descriptionToggle");
-const modalRecommendationsEl = document.getElementById("modalRecommendations");
-const playerActionsEl = document.getElementById("playerActions");
+const modal = document.getElementById("playerModal");
+const modalClose = document.getElementById("modalCloseBtn");
+const modalTitle = document.getElementById("modalTitle");
+const modalChannel = document.getElementById("modalChannel");
+const modalDesc = document.getElementById("modalDescription");
+const descToggle = document.getElementById("descriptionToggle");
+const recList = document.getElementById("modalRecommendations");
 
-const nextVideoBtn = document.getElementById("nextVideoBtn");
-const prevVideoBtn = document.getElementById("prevVideoBtn");
+const nextBtn = document.getElementById("nextVideoBtn");
+const prevBtn = document.getElementById("prevVideoBtn");
+const downloadBtn = document.getElementById("downloadBtn");
 
-// ------------ STATE ------------
-let currentQuery = "";
-let lastFetchedItems = [];
-let currentVideoIndex = -1;
+// STATE
+let videos = [];
+let index = 0;
+let player;
 
-let popupPlayer = null;
-let popupReady = false;
-
-// ------------ THEME ------------
-function applyTheme(theme) {
-  document.body.setAttribute("data-theme", theme);
-  themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀️";
-  localStorage.setItem("amfilter-theme", theme);
-}
-applyTheme(localStorage.getItem("amfilter-theme") === "light" ? "light" : "dark");
-
-themeToggleBtn.onclick = () => {
-  applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
+// THEME
+themeToggle.onclick = () => {
+  const t = document.body.dataset.theme === "light" ? "dark" : "light";
+  document.body.dataset.theme = t;
 };
 
-// ------------ FETCH VIDEOS ------------
-async function fetchVideos() {
-  if (!currentQuery) return;
+// FETCH
+async function search() {
+  const q = keywordInput.value.trim();
+  if (!q) return;
 
-  loaderEl.classList.remove("hidden");
-
-  const res = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}`);
+  loader.classList.remove("hidden");
+  const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
   const data = await res.json();
-
-  lastFetchedItems = data.items || [];
-  renderVideos(lastFetchedItems);
-
-  loaderEl.classList.add("hidden");
+  videos = data.items;
+  render();
+  loader.classList.add("hidden");
 }
 
-// ------------ RENDER VIDEOS ------------
-function renderVideos(items) {
-  videoListEl.innerHTML = "";
-
-  items.forEach((item, index) => {
+// RENDER
+function render() {
+  videoList.innerHTML = "";
+  videos.forEach((v, i) => {
     const card = document.createElement("div");
     card.className = "video-card";
     card.innerHTML = `
-      <img src="${item.snippet.thumbnails.medium.url}">
+      <img src="${v.snippet.thumbnails.medium.url}">
       <div class="video-body">
-        <div class="video-title">${item.snippet.title}</div>
-        <div class="video-meta">
-          <span>${item.snippet.channelTitle}</span>
-          <span>${new Date(item.snippet.publishedAt).toLocaleDateString()}</span>
-        </div>
-      </div>
-    `;
-    card.onclick = () => openPlayer(index);
-    videoListEl.appendChild(card);
+        <div class="video-title">${v.snippet.title}</div>
+        <div class="video-meta">${v.snippet.channelTitle}</div>
+      </div>`;
+    card.onclick = () => open(i);
+    videoList.appendChild(card);
   });
 }
 
-// ------------ YT API ------------
+// PLAYER
 window.onYouTubeIframeAPIReady = () => {
-  popupPlayer = new YT.Player("popupPlayer", {
-    playerVars: { autoplay: 1, rel: 0 },
-    events: { onReady: () => popupReady = true }
-  });
+  player = new YT.Player("popupPlayer");
 };
 
-// ------------ OPEN PLAYER ------------
-function openPlayer(index) {
-  if (!popupReady) return;
-
-  currentVideoIndex = index;
-  const item = lastFetchedItems[index];
+function open(i) {
+  index = i;
+  const v = videos[i];
 
   document.body.classList.add("modal-open");
-  playerModal.classList.remove("hidden");
+  modal.classList.remove("hidden");
 
-  modalTitleEl.textContent = item.snippet.title;
-  modalChannelEl.textContent = item.snippet.channelTitle;
+  modalTitle.textContent = v.snippet.title;
+  modalChannel.textContent = v.snippet.channelTitle;
+  modalDesc.textContent = "Loading...";
 
-  popupPlayer.loadVideoById(item.id.videoId);
+  player.loadVideoById(v.id.videoId);
 
-  // DESCRIPTION
-  modalDescriptionEl.textContent = "Loading description...";
-  fetch(`/api/videoDetails?id=${item.id.videoId}`)
+  fetch(`/api/videoDetails?id=${v.id.videoId}`)
     .then(r => r.json())
-    .then(d => {
-      modalDescriptionEl.textContent =
-        d.items?.[0]?.snippet?.description || "No description available.";
-    })
-    .catch(() => {
-      modalDescriptionEl.textContent = "Failed to load description.";
-    });
+    .then(d => modalDesc.textContent =
+      d.items?.[0]?.snippet?.description || "No description"
+    );
 
-  // DOWNLOAD BUTTON (single, clean)
-  playerActionsEl.innerHTML = "";
-  const downloadBtn = document.createElement("button");
-  downloadBtn.className = "download-btn";
-  downloadBtn.textContent = "Download Video";
   downloadBtn.onclick = () => {
-    const yt = `https://www.youtube.com/watch?v=${item.id.videoId}`;
-    window.open(`https://www.y2mate.com/youtube/${encodeURIComponent(yt)}`, "_blank");
+    const url = `https://www.youtube.com/watch?v=${v.id.videoId}`;
+    window.open(`https://yt1s.com/en?q=${encodeURIComponent(url)}`, "_blank");
   };
-  playerActionsEl.appendChild(downloadBtn);
 
-  renderRecommendations(item.id.videoId);
-  updateNav();
+  renderRecs();
 }
 
-// ------------ NEXT / PREV ------------
-nextVideoBtn.onclick = () => {
-  if (currentVideoIndex < lastFetchedItems.length - 1)
-    openPlayer(currentVideoIndex + 1);
+// NAV
+nextBtn.onclick = () => index < videos.length - 1 && open(index + 1);
+prevBtn.onclick = () => index > 0 && open(index - 1);
+
+// DESC
+descToggle.onclick = () => {
+  modalDesc.classList.toggle("expanded");
+  descToggle.textContent =
+    modalDesc.classList.contains("expanded")
+      ? "Show less ▲"
+      : "Show more ▼";
 };
-prevVideoBtn.onclick = () => {
-  if (currentVideoIndex > 0)
-    openPlayer(currentVideoIndex - 1);
-};
 
-function updateNav() {
-  prevVideoBtn.disabled = currentVideoIndex <= 0;
-  nextVideoBtn.disabled = currentVideoIndex >= lastFetchedItems.length - 1;
+// RECS
+function renderRecs() {
+  recList.innerHTML = "";
+  videos.slice(0, 6).forEach((v, i) => {
+    if (i === index) return;
+    const d = document.createElement("div");
+    d.className = "modal-rec-card";
+    d.innerHTML = `
+      <img src="${v.snippet.thumbnails.default.url}">
+      <div>${v.snippet.title}</div>`;
+    d.onclick = () => open(i);
+    recList.appendChild(d);
+  });
 }
 
-// ------------ RECOMMENDATIONS ------------
-function renderRecommendations(currentId) {
-  modalRecommendationsEl.innerHTML = "";
-
-  lastFetchedItems
-    .filter(v => v.id.videoId !== currentId)
-    .slice(0, 8)
-    .forEach(item => {
-      const div = document.createElement("div");
-      div.className = "modal-rec-card";
-      div.innerHTML = `
-        <img class="modal-rec-thumb" src="${item.snippet.thumbnails.default.url}">
-        <div>
-          <div class="modal-rec-title">${item.snippet.title}</div>
-          <div class="modal-rec-channel">${item.snippet.channelTitle}</div>
-        </div>
-      `;
-      div.onclick = () => openPlayer(
-        lastFetchedItems.findIndex(v => v.id.videoId === item.id.videoId)
-      );
-      modalRecommendationsEl.appendChild(div);
-    });
-}
-
-// ------------ CLOSE POPUP ------------
-modalCloseBtn.onclick = () => {
-  popupPlayer.stopVideo();
-  playerModal.classList.add("hidden");
+// CLOSE
+modalClose.onclick = () => {
+  modal.classList.add("hidden");
   document.body.classList.remove("modal-open");
+  player.stopVideo();
 };
 
-// ------------ SEARCH ------------
-keywordInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    currentQuery = keywordInput.value.trim();
-    fetchVideos();
-  }
-});
-filterBtn.onclick = () => {
-  currentQuery = keywordInput.value.trim();
-  fetchVideos();
-};
+// SEARCH EVENTS
+filterBtn.onclick = search;
+keywordInput.onkeydown = e => e.key === "Enter" && search();
