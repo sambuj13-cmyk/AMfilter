@@ -1055,4 +1055,45 @@ body.modal-open {
     0 14px 35px rgba(239, 68, 68, 0.65),
     inset 0 0 12px rgba(255, 255, 255, 0.2);
 }
+/* ----------- FIX POPUP SCROLL & LAYOUT ----------- */
+
+/* Lock background scroll when popup is open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Allow popup content to scroll */
+.player-modal-content {
+  overflow: hidden;
+}
+
+/* Make main area scrollable */
+.player-modal-main {
+  overflow-y: auto;
+}
+
+/* Keep left content flowing */
+.player-modal-left {
+  overflow: visible;
+}
+
+/* Ensure right recommendations scroll */
+.player-modal-right {
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+/* ----------- PLAYER ACTION BAR ----------- */
+.player-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Download button stays aligned */
+.download-btn {
+  margin: 0;
+}
 
