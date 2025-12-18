@@ -21,12 +21,8 @@ document.addEventListener("click", () => {
 
 // ------------ DOM ELEMENTS ------------
 const keywordInput = document.getElementById("keyword");
-const ratingSelect = document.getElementById("rating");
-const contentTypeSelect = document.getElementById("contentType");
 const filterBtn = document.getElementById("filterBtn");
 const videoListEl = document.getElementById("videoList");
-const resultInfoEl = document.getElementById("resultInfo");
-const errorInfoEl = document.getElementById("errorInfo");
 const loaderEl = document.getElementById("loader");
 const themeToggleBtn = document.getElementById("themeToggle");
 
@@ -44,11 +40,8 @@ const prevVideoBtn = document.getElementById("prevVideoBtn");
 
 // ------------ STATE ------------
 let currentQuery = "";
-let nextPageToken = null;
-let isLoading = false;
 let lastFetchedItems = [];
 let currentVideoIndex = -1;
-let currentVideo = null;
 
 let popupPlayer = null;
 let popupReady = false;
@@ -61,37 +54,28 @@ function applyTheme(theme) {
 }
 applyTheme(localStorage.getItem("amfilter-theme") === "light" ? "light" : "dark");
 
-themeToggleBtn.addEventListener("click", () => {
+themeToggleBtn.onclick = () => {
   applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
-});
+};
 
 // ------------ FETCH VIDEOS ------------
-async function fetchVideos({ append = false } = {}) {
-  if (!currentQuery || isLoading) return;
+async function fetchVideos() {
+  if (!currentQuery) return;
 
-  isLoading = true;
   loaderEl.classList.remove("hidden");
 
-  try {
-    const res = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}`);
-    const data = await res.json();
+  const res = await fetch(`/api/search?q=${encodeURIComponent(currentQuery)}`);
+  const data = await res.json();
 
-    nextPageToken = data.nextPageToken || null;
-    lastFetchedItems = append ? [...lastFetchedItems, ...data.items] : data.items;
-
-    renderVideos(data.items, append);
-    resultInfoEl.textContent = `Showing ${lastFetchedItems.length} videos`;
-  } catch (e) {
-    errorInfoEl.textContent = "Failed to fetch videos.";
-  }
+  lastFetchedItems = data.items || [];
+  renderVideos(lastFetchedItems);
 
   loaderEl.classList.add("hidden");
-  isLoading = false;
 }
 
 // ------------ RENDER VIDEOS ------------
-function renderVideos(items, append = false) {
-  if (!append) videoListEl.innerHTML = "";
+function renderVideos(items) {
+  videoListEl.innerHTML = "";
 
   items.forEach((item, index) => {
     const card = document.createElement("div");
@@ -106,19 +90,16 @@ function renderVideos(items, append = false) {
         </div>
       </div>
     `;
-
     card.onclick = () => openPlayer(index);
     videoListEl.appendChild(card);
   });
 }
 
-// ------------ YT API READY ------------
+// ------------ YT API ------------
 window.onYouTubeIframeAPIReady = () => {
   popupPlayer = new YT.Player("popupPlayer", {
     playerVars: { autoplay: 1, rel: 0 },
-    events: {
-      onReady: () => popupReady = true
-    }
+    events: { onReady: () => popupReady = true }
   });
 };
 
@@ -128,7 +109,6 @@ function openPlayer(index) {
 
   currentVideoIndex = index;
   const item = lastFetchedItems[index];
-  currentVideo = item;
 
   document.body.classList.add("modal-open");
   playerModal.classList.remove("hidden");
@@ -138,7 +118,7 @@ function openPlayer(index) {
 
   popupPlayer.loadVideoById(item.id.videoId);
 
-  // Description
+  // DESCRIPTION
   modalDescriptionEl.textContent = "Loading description...";
   fetch(`/api/videoDetails?id=${item.id.videoId}`)
     .then(r => r.json())
@@ -146,52 +126,48 @@ function openPlayer(index) {
       modalDescriptionEl.textContent =
         d.items?.[0]?.snippet?.description || "No description available.";
     })
-    .catch(() => modalDescriptionEl.textContent = "Failed to load description.");
+    .catch(() => {
+      modalDescriptionEl.textContent = "Failed to load description.";
+    });
 
-  // Download Button
+  // DOWNLOAD BUTTON (single, clean)
   playerActionsEl.innerHTML = "";
-  const btn = document.createElement("button");
-  btn.className = "download-btn";
-  btn.textContent = "Download Video";
-  btn.onclick = () => {
+  const downloadBtn = document.createElement("button");
+  downloadBtn.className = "download-btn";
+  downloadBtn.textContent = "Download Video";
+  downloadBtn.onclick = () => {
     const yt = `https://www.youtube.com/watch?v=${item.id.videoId}`;
     window.open(`https://www.y2mate.com/youtube/${encodeURIComponent(yt)}`, "_blank");
   };
-  playerActionsEl.appendChild(btn);
+  playerActionsEl.appendChild(downloadBtn);
 
-  updateNavHighlight();
-  renderRecommendations();
+  renderRecommendations(item.id.videoId);
+  updateNav();
 }
-
-// ------------ CLOSE PLAYER ------------
-modalCloseBtn.onclick = () => {
-  popupPlayer.stopVideo();
-  playerModal.classList.add("hidden");
-  document.body.classList.remove("modal-open");
-};
 
 // ------------ NEXT / PREV ------------
 nextVideoBtn.onclick = () => {
   if (currentVideoIndex < lastFetchedItems.length - 1)
     openPlayer(currentVideoIndex + 1);
 };
-
 prevVideoBtn.onclick = () => {
   if (currentVideoIndex > 0)
     openPlayer(currentVideoIndex - 1);
 };
 
-function updateNavHighlight() {
+function updateNav() {
   prevVideoBtn.disabled = currentVideoIndex <= 0;
   nextVideoBtn.disabled = currentVideoIndex >= lastFetchedItems.length - 1;
 }
 
 // ------------ RECOMMENDATIONS ------------
-function renderRecommendations() {
+function renderRecommendations(currentId) {
   modalRecommendationsEl.innerHTML = "";
 
-  lastFetchedItems.slice(currentVideoIndex + 1, currentVideoIndex + 7)
-    .forEach((item, i) => {
+  lastFetchedItems
+    .filter(v => v.id.videoId !== currentId)
+    .slice(0, 8)
+    .forEach(item => {
       const div = document.createElement("div");
       div.className = "modal-rec-card";
       div.innerHTML = `
@@ -201,10 +177,19 @@ function renderRecommendations() {
           <div class="modal-rec-channel">${item.snippet.channelTitle}</div>
         </div>
       `;
-      div.onclick = () => openPlayer(currentVideoIndex + i + 1);
+      div.onclick = () => openPlayer(
+        lastFetchedItems.findIndex(v => v.id.videoId === item.id.videoId)
+      );
       modalRecommendationsEl.appendChild(div);
     });
 }
+
+// ------------ CLOSE POPUP ------------
+modalCloseBtn.onclick = () => {
+  popupPlayer.stopVideo();
+  playerModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
 
 // ------------ SEARCH ------------
 keywordInput.addEventListener("keydown", e => {
@@ -213,7 +198,6 @@ keywordInput.addEventListener("keydown", e => {
     fetchVideos();
   }
 });
-
 filterBtn.onclick = () => {
   currentQuery = keywordInput.value.trim();
   fetchVideos();
