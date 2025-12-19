@@ -13,12 +13,16 @@ window.addEventListener("load", () => {
 const openSound = document.getElementById("openSound");
 let soundPlayed = false;
 
-document.addEventListener("click", () => {
-  if (!soundPlayed && openSound) {
-    openSound.play().catch(() => {});
-    soundPlayed = true;
-  }
-}, { once: true });
+document.addEventListener(
+  "click",
+  () => {
+    if (!soundPlayed && openSound) {
+      openSound.play().catch(() => {});
+      soundPlayed = true;
+    }
+  },
+  { once: true }
+);
 
 // ------------ DOM ELEMENTS ------------
 const keywordInput = document.getElementById("keyword");
@@ -39,6 +43,7 @@ const modalDescriptionEl = document.getElementById("modalDescription");
 const descriptionToggleBtn = document.getElementById("descriptionToggle");
 const modalRecommendationsEl = document.getElementById("modalRecommendations");
 
+// ------------ STATE ------------
 let currentQuery = "";
 let currentRating = "all";
 let currentContentType = "all";
@@ -49,6 +54,7 @@ let currentVideo = null;
 
 let popupPlayer = null;
 let popupReady = false;
+let pendingVideoId = null;
 
 // ------------ THEME ------------
 function applyTheme(theme) {
@@ -59,7 +65,9 @@ function applyTheme(theme) {
 applyTheme(localStorage.getItem("amfilter-theme") === "light" ? "light" : "dark");
 
 themeToggleBtn.addEventListener("click", () => {
-  applyTheme(document.body.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  applyTheme(
+    document.body.getAttribute("data-theme") === "dark" ? "light" : "dark"
+  );
 });
 
 // ------------ RENDER VIDEOS ------------
@@ -69,6 +77,7 @@ function renderVideos(items, append = false) {
   items.forEach(item => {
     const card = document.createElement("div");
     card.className = "video-card";
+
     card.innerHTML = `
       <img src="${item.snippet.thumbnails.medium.url}">
       <div class="video-body">
@@ -80,11 +89,13 @@ function renderVideos(items, append = false) {
       </div>
     `;
 
-    card.onclick = () => openPlayerModal({
-      id: item.id.videoId,
-      title: item.snippet.title,
-      channel: item.snippet.channelTitle
-    });
+    card.onclick = () => {
+      openPlayerModal({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle
+      });
+    };
 
     videoListEl.appendChild(card);
   });
@@ -96,6 +107,7 @@ async function fetchVideos({ append = false } = {}) {
 
   isLoading = true;
   loaderEl.classList.remove("hidden");
+  errorInfoEl.textContent = "";
 
   const params = new URLSearchParams({
     q: currentQuery,
@@ -103,55 +115,84 @@ async function fetchVideos({ append = false } = {}) {
     contentType: currentContentType
   });
 
-  if (append && nextPageToken) params.append("pageToken", nextPageToken);
+  if (append && nextPageToken) {
+    params.append("pageToken", nextPageToken);
+  }
 
-  const res = await fetch(`/api/search?${params}`);
-  const data = await res.json();
+  try {
+    const res = await fetch(`/api/search?${params.toString()}`);
+    const data = await res.json();
 
-  nextPageToken = data.nextPageToken || null;
-  if (!append) lastFetchedItems = [];
-  lastFetchedItems.push(...data.items);
+    nextPageToken = data.nextPageToken || null;
 
-  renderVideos(data.items, append);
-  loaderEl.classList.add("hidden");
-  isLoading = false;
+    if (!append) lastFetchedItems = [];
+    lastFetchedItems.push(...data.items);
+
+    renderVideos(data.items, append);
+    resultInfoEl.textContent = `Showing ${videoListEl.children.length} videos`;
+  } catch (err) {
+    errorInfoEl.textContent = "Failed to fetch videos.";
+  } finally {
+    loaderEl.classList.add("hidden");
+    isLoading = false;
+  }
 }
 
 // ------------ YOUTUBE API ------------
 window.onYouTubeIframeAPIReady = function () {
   popupPlayer = new YT.Player("popupPlayer", {
-    playerVars: { autoplay: 0, controls: 1 },
-    events: { onReady: () => popupReady = true }
+    playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1 },
+    events: {
+      onReady: () => {
+        popupReady = true;
+        if (pendingVideoId) {
+          popupPlayer.loadVideoById(pendingVideoId);
+          pendingVideoId = null;
+        }
+      }
+    }
   });
 };
 
-// ------------ POPUP OPEN / CLOSE ------------
+// ------------ POPUP OPEN ------------
 function openPlayerModal(video) {
   currentVideo = video;
+
   playerModal.classList.remove("hidden");
   document.body.classList.add("modal-open");
 
   modalTitleEl.textContent = video.title;
   modalChannelEl.textContent = video.channel;
 
-  if (popupReady) popupPlayer.loadVideoById(video.id);
+  if (popupReady) {
+    popupPlayer.loadVideoById(video.id);
+  } else {
+    pendingVideoId = video.id;
+  }
 
   modalDescriptionEl.textContent = "Loading...";
-  fetch(`/api/videoDetails?id=${video.id}`)
+  fetch(`/api/videoDetails?id=${encodeURIComponent(video.id)}`)
     .then(r => r.json())
-    .then(d => modalDescriptionEl.textContent =
-      d.items?.[0]?.snippet?.description ?? "No description available.");
+    .then(d => {
+      modalDescriptionEl.textContent =
+        d.items?.[0]?.snippet?.description ?? "No description available.";
+    })
+    .catch(() => {
+      modalDescriptionEl.textContent = "Failed to load description.";
+    });
 }
 
+// ------------ POPUP CLOSE ------------
 modalCloseBtn.onclick = () => {
-  popupPlayer.stopVideo();
+  if (popupPlayer && popupReady) popupPlayer.stopVideo();
   playerModal.classList.add("hidden");
   document.body.classList.remove("modal-open");
 };
 
 // ------------ DESCRIPTION TOGGLE ------------
 descriptionToggleBtn.onclick = () => {
-  modalDescriptionEl.classList.toggle("expanded");
+  const expanded = modalDescriptionEl.classList.toggle("expanded");
+  descriptionToggleBtn.textContent = expanded ? "Show less ▲" : "Show more ▼";
 };
 
 // ------------ SEARCH ------------
@@ -169,7 +210,12 @@ keywordInput.addEventListener("keydown", e => {
 
 // ------------ INFINITE SCROLL ------------
 window.addEventListener("scroll", () => {
-  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) {
-    if (nextPageToken && !isLoading) fetchVideos({ append: true });
+  if (
+    window.innerHeight + window.scrollY >=
+    document.body.offsetHeight - 400
+  ) {
+    if (nextPageToken && !isLoading) {
+      fetchVideos({ append: true });
+    }
   }
 });
