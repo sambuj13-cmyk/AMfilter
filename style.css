@@ -1030,3 +1030,28 @@ body.modal-open {
     50% { transform: translateY(-18px) scale(1.05); }
     100% { transform: translateY(0) scale(1); }
 }
+/* ================= POPUP SCROLL FIX ================= */
+
+/* Lock background scroll when popup is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Make popup content scrollable instead of background */
+.player-modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Ensure backdrop stays fixed */
+.player-modal-backdrop {
+    position: fixed;
+}
+
+/* ================= TRADEMARK FOOTER ================= */
+
+.footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+}
