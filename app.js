@@ -41,6 +41,8 @@ const resultInfoEl = document.getElementById("resultInfo");
 const errorInfoEl = document.getElementById("errorInfo");
 const loaderEl = document.getElementById("loader");
 const themeToggleBtn = document.getElementById("themeToggle");
+const downloadBtn = document.getElementById("downloadBtn");
+
 
 // Popup elements
 const playerModal = document.getElementById("playerModal");
@@ -528,3 +530,14 @@ miniPrevBtn.addEventListener("click", () => {
 
 // Init
 initTheme();
+
+
+// ------------ DOWNLOAD USING YT1S ------------
+downloadBtn.addEventListener("click", () => {
+  if (!currentVideo) return;
+
+  const ytUrl = `https://www.youtube.com/watch?v=${currentVideo.id}`;
+  const yt1sUrl = `https://yt1s.com/en?q=${encodeURIComponent(ytUrl)}`;
+
+  window.open(yt1sUrl, "_blank", "noopener");
+});
