@@ -566,7 +566,8 @@ body[data-theme="light"] .social-icon {
     padding: 10px 12px 12px;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* whole modal can scroll inside if needed */
+    overflow-y: auto;
+
 }
 
 body[data-theme="light"] .player-modal-content {
@@ -607,8 +608,8 @@ body[data-theme="light"] .modal-close-btn {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 10px;
-    /* let content define its own height */
-    overflow: visible;
+   overflow: unset;
+
 }
 
 .player-modal-left {
