@@ -3,49 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>AMFilter</title>
-
-    <!-- This makes the layout adapt to mobile screens -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <link rel="stylesheet" href="style.css">
-
 </head>
 
 <body>
+
 <!-- INTRO SCREEN -->
 <div id="intro">
   <div class="intro-3d">
-
     <div class="intro-bg-text">AMFILTER</div>
-
     <div class="shape-wrapper">
       <div class="floating-shape"></div>
     </div>
-
     <div class="intro-center">
       <h1 class="intro-logo">AMFILTER</h1>
       <p class="intro-tagline">Clean your YouTube experience</p>
     </div>
-
   </div>
 </div>
 
-<!-- OPENING SOUND -->
 <audio id="openSound" src="startup.mp3" preload="auto"></audio>
 
-
-<!-- Background blobs for light & shadows -->
 <div class="bg-blobs">
     <div class="blob blob1"></div>
     <div class="blob blob2"></div>
 </div>
 
-<!-- Big faint logo -->
 <div class="logo-bg-text">AMFILTER</div>
 
 <header class="header">
     <div class="brand">
-        <img src="logo.png" alt="AMFilter Logo" class="brand-image">
+        <img src="logo.png" class="brand-image" alt="AMFilter Logo">
         <div class="brand-text">
             <div class="brand-name">AMFilter</div>
             <div class="brand-tagline">Clean & customize your YouTube feed</div>
@@ -56,11 +45,9 @@
         <a href="https://www.instagram.com/justbeingambuj" target="_blank" class="icon-btn">
             <img src="insta.jpg" class="social-icon" alt="Instagram">
         </a>
-
         <a href="https://github.com/sambuj13-cmyk/AMfilter" target="_blank" class="icon-btn">
             <img src="github.jpg" class="social-icon" alt="GitHub">
         </a>
-
         <button id="themeToggle" class="theme-toggle">🌙</button>
     </div>
 </header>
@@ -117,7 +104,7 @@
 </main>
 
 <footer class="footer">
-    <p>Made by Ambuj • AMFilter</p>
+    <p>AMFilter™ © 2025 Ambuj Mishra. All rights reserved.</p>
 </footer>
 
 <!-- POPUP PLAYER -->
@@ -131,8 +118,6 @@
 
         <div class="player-modal-main">
             <div class="player-modal-left">
-
-                <!-- POPUP PLAYER (YouTube IFrame API will inject iframe here) -->
                 <div class="player-frame-wrapper">
                     <div id="popupPlayer"></div>
                 </div>
@@ -141,7 +126,6 @@
                     <h2 id="modalTitle"></h2>
                     <p id="modalChannel"></p>
 
-                    <!-- NEW: Next / Prev buttons for popup player -->
                     <div class="player-nav">
                         <button id="prevVideoBtn" class="player-nav-btn">⟨ Prev</button>
                         <button id="nextVideoBtn" class="player-nav-btn">Next ⟩</button>
@@ -164,31 +148,7 @@
     </div>
 </div>
 
-<!-- MINI PLAYER -->
-<div id="miniPlayer" class="mini-player hidden">
-    <div class="mini-player-left">
-        <div class="mini-frame-wrapper">
-            <!-- MINI MODE PLAYER -->
-            <div id="miniPlayerFrame"></div>
-        </div>
-    </div>
-
-    <div class="mini-player-right">
-        <div id="miniTitle" class="mini-title">Playing...</div>
-        <div class="mini-controls">
-            <!-- NEW: Prev / Next buttons in mini player -->
-            <button id="miniPrevBtn" class="mini-btn">⟨</button>
-            <button id="miniPlayPauseBtn" class="mini-btn">⏯</button>
-            <button id="miniNextBtn" class="mini-btn">⟩</button>
-            <button id="miniExpandBtn" class="mini-btn">⤢</button>
-            <button id="miniCloseBtn" class="mini-btn">✕</button>
-        </div>
-    </div>
-</div>
-
 <script src="app.js"></script>
-    
-    <!-- YouTube IFrame API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.youtube.com/iframe_api"></script>
 </body>
 </html>
