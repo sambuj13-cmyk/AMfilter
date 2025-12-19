@@ -332,6 +332,7 @@ function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying =
 
   miniPlayerBox.classList.add("hidden");
   playerModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 
   modalTitleEl.textContent = video.title;
   modalChannelEl.textContent = video.channel;
@@ -389,6 +390,8 @@ function closePlayerModal() {
   }
 
   playerModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+
 }
 
 // ------------ RECOMMENDATIONS ------------
