@@ -1030,22 +1030,38 @@ body.modal-open {
     50% { transform: translateY(-18px) scale(1.05); }
     100% { transform: translateY(0) scale(1); }
 }
-/* ================= POPUP SCROLL FIX ================= */
+/* ================= POPUP SCROLL – FINAL FIX ================= */
 
-/* Lock background scroll when popup is open */
+/* Lock background scroll */
 body.modal-open {
     overflow: hidden;
 }
 
-/* Make popup content scrollable instead of background */
+/* Modal container itself should NOT scroll */
 .player-modal-content {
-    max-height: 90vh;
+    overflow: hidden;
+}
+
+/* Make ONLY the main popup body scroll */
+.player-modal-main {
+    flex: 1;
     overflow-y: auto;
 }
 
-/* Ensure backdrop stays fixed */
-.player-modal-backdrop {
-    position: fixed;
+/* Keep recommendation sidebar scrollable */
+.modal-rec-list {
+    overflow-y: auto;
+}
+
+/* Hide scrollbar but keep scrolling */
+.player-modal-main::-webkit-scrollbar,
+.modal-rec-list::-webkit-scrollbar {
+    width: 0px;
+}
+
+.player-modal-main,
+.modal-rec-list {
+    scrollbar-width: none; /* Firefox */
 }
 
 /* ================= TRADEMARK FOOTER ================= */
