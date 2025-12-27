@@ -66,6 +66,13 @@ const miniCloseBtn = document.getElementById("miniCloseBtn");
 const miniNextBtn = document.getElementById("miniNextBtn");
 const miniPrevBtn = document.getElementById("miniPrevBtn");
 
+// NEW: Queue elements
+const queueToggleBtn = document.getElementById("queueToggleBtn");
+const queuePanel = document.getElementById("queuePanel");
+const queueCloseBtn = document.getElementById("queueCloseBtn");
+const queueList = document.getElementById("queueList");
+const clearQueueBtn = document.getElementById("clearQueueBtn");
+
 // ------------ STATE ------------
 let currentQuery = "";
 let currentRating = "all";
@@ -75,6 +82,10 @@ let isLoading = false;
 let lastFetchedItems = [];
 let currentVideo = null;
 let currentVideoIndex = -1; // NEW: track index in lastFetchedItems
+
+// NEW: Queue state
+let videoQueue = []; // Store queued videos
+let isPlayingFromQueue = false; // Track if currently playing from queue
 
 // YT players
 let popupPlayer = null;
@@ -146,6 +157,131 @@ function playPrev(mode = "popup") {
   playByIndex(prevIndex, mode);
 }
 
+// ------------ QUEUE MANAGEMENT (NEW) ------------
+
+function addToQueue(video) {
+  // Check if video is already in queue
+  const alreadyInQueue = videoQueue.find(v => v.id === video.id);
+  if (!alreadyInQueue) {
+    videoQueue.push(video);
+    updateQueueDisplay();
+    showQueueNotification("Added to queue");
+  } else {
+    showQueueNotification("Already in queue");
+  }
+}
+
+function removeFromQueue(videoId) {
+  videoQueue = videoQueue.filter(v => v.id !== videoId);
+  updateQueueDisplay();
+}
+
+function clearQueue() {
+  videoQueue = [];
+  updateQueueDisplay();
+  showQueueNotification("Queue cleared");
+}
+
+function updateQueueDisplay() {
+  if (videoQueue.length === 0) {
+    queueList.innerHTML = '<p class="queue-empty">Queue is empty</p>';
+    return;
+  }
+
+  queueList.innerHTML = "";
+  videoQueue.forEach((video, index) => {
+    const queueItem = document.createElement("div");
+    queueItem.className = "queue-item";
+    if (currentVideo && currentVideo.id === video.id) {
+      queueItem.classList.add("active");
+    }
+
+    queueItem.innerHTML = `
+      <div class="queue-item-info">
+        <div class="queue-item-title">${video.title}</div>
+        <div class="queue-item-channel">${video.channel}</div>
+      </div>
+      <button class="queue-item-remove">✕</button>
+    `;
+
+    queueItem.addEventListener("click", (e) => {
+      if (!e.target.classList.contains("queue-item-remove")) {
+        playQueueItem(index);
+      }
+    });
+
+    queueItem.querySelector(".queue-item-remove").addEventListener("click", (e) => {
+      e.stopPropagation();
+      removeFromQueue(video.id);
+    });
+
+    queueList.appendChild(queueItem);
+  });
+}
+
+function playQueueItem(index) {
+  const video = videoQueue[index];
+  if (!video) return;
+
+  currentVideo = video;
+  isPlayingFromQueue = true;
+  const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
+  
+  if (mode === "mini") {
+    openInMiniPlayer(video);
+  } else {
+    openPlayerModal(video, { fromMini: false });
+  }
+  
+  updateQueueDisplay();
+}
+
+function playNextFromQueue(mode = "popup") {
+  if (!isPlayingFromQueue || !currentVideo) return false;
+
+  const currentIndex = videoQueue.findIndex(v => v.id === currentVideo.id);
+  if (currentIndex === -1) return false;
+
+  const nextIndex = currentIndex + 1;
+  if (nextIndex < videoQueue.length) {
+    playQueueItem(nextIndex);
+    return true;
+  }
+  
+  // Queue finished, return to normal playlist
+  isPlayingFromQueue = false;
+  updateQueueDisplay();
+  return false;
+}
+
+function toggleQueuePanel() {
+  queuePanel.classList.toggle("hidden");
+}
+
+function showQueueNotification(message) {
+  const notification = document.createElement("div");
+  notification.style.cssText = `
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    background: rgba(59, 130, 246, 0.9);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    z-index: 999;
+    animation: slideInUp 0.3s ease;
+  `;
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = "slideOutDown 0.3s ease";
+    setTimeout(() => notification.remove(), 300);
+  }, 2000);
+}
+
+
 // ------------ RENDER VIDEOS ------------
 function renderVideos(items, append = false) {
   if (!append) videoListEl.innerHTML = "";
@@ -164,19 +300,32 @@ function renderVideos(items, append = false) {
             <span>${s.channelTitle}</span>
             <span>${new Date(s.publishedAt).toLocaleDateString()}</span>
         </div>
-        <span class="badge">${
-          currentContentType === "shorts" ? "Short" :
-          currentContentType === "videos" ? "Video" : "YouTube"
-        }</span>
+        <div class="video-actions">
+          <span class="badge">${
+            currentContentType === "shorts" ? "Short" :
+            currentContentType === "videos" ? "Video" : "YouTube"
+          }</span>
+          <button class="add-to-queue-btn" title="Add to Queue">➕ Queue</button>
+        </div>
       </div>
     `;
 
-    card.addEventListener("click", () => {
-      // find index in the global list, then play via playlist logic
-      const idx = lastFetchedItems.findIndex(v => v.id.videoId === id);
-      const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
-      if (idx !== -1) {
-        playByIndex(idx, mode);
+    card.addEventListener("click", (e) => {
+      if (e.target.classList.contains("add-to-queue-btn")) {
+        e.stopPropagation();
+        const video = {
+          id: id,
+          title: s.title,
+          channel: s.channelTitle
+        };
+        addToQueue(video);
+      } else {
+        // find index in the global list, then play via playlist logic
+        const idx = lastFetchedItems.findIndex(v => v.id.videoId === id);
+        const mode = miniPlayerBox.classList.contains("hidden") ? "popup" : "mini";
+        if (idx !== -1) {
+          playByIndex(idx, mode);
+        }
       }
     });
 
@@ -271,15 +420,31 @@ async function fetchVideos({ append = false } = {}) {
 // ------------ YT API READY ------------
 function onPopupPlayerStateChange(event) {
   if (event.data === YT.PlayerState.ENDED) {
-    // autoplay next in popup mode
-    playNext("popup");
+    // Check if playing from queue first
+    if (isPlayingFromQueue) {
+      const hasMore = playNextFromQueue("popup");
+      if (!hasMore) {
+        playNext("popup"); // Fall back to regular playlist
+      }
+    } else {
+      // autoplay next in popup mode
+      playNext("popup");
+    }
   }
 }
 
 function onMiniPlayerStateChange(event) {
   if (event.data === YT.PlayerState.ENDED) {
-    // autoplay next in mini mode
-    playNext("mini");
+    // Check if playing from queue first
+    if (isPlayingFromQueue) {
+      const hasMore = playNextFromQueue("mini");
+      if (!hasMore) {
+        playNext("mini"); // Fall back to regular playlist
+      }
+    } else {
+      // autoplay next in mini mode
+      playNext("mini");
+    }
   }
 }
 
@@ -527,6 +692,20 @@ miniNextBtn.addEventListener("click", () => {
 });
 miniPrevBtn.addEventListener("click", () => {
   playPrev("mini");
+});
+
+// NEW: Queue event listeners
+queueToggleBtn.addEventListener("click", toggleQueuePanel);
+queueCloseBtn.addEventListener("click", toggleQueuePanel);
+clearQueueBtn.addEventListener("click", clearQueue);
+
+// Close queue panel when clicking outside
+document.addEventListener("click", (e) => {
+  if (!queuePanel.classList.contains("hidden") && 
+      !queuePanel.contains(e.target) && 
+      e.target !== queueToggleBtn) {
+    queuePanel.classList.add("hidden");
+  }
 });
 
 // Init
