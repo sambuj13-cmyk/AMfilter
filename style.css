@@ -873,6 +873,8 @@ body[data-theme="light"] .modal-rec-card {
     max-width: 340px;
     cursor: grab;
     user-select: none;
+    transform: translateX(0);
+    will-change: transform;
 }
 
 body[data-theme="light"] .mini-player {

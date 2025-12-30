@@ -708,8 +708,13 @@ let isDragging = false;
 let startX = 0;
 let startY = 0;
 let miniPlayerX = null; // Store position, null means default (right: 16px)
+let lastX = 0;
+let lastTime = 0;
+let animationFrameId = null;
 const DRAG_THRESHOLD = 10; // Minimum pixels to start drag
-const CLOSE_THRESHOLD = 0.4; // Close if dragged 40% of screen width
+const CLOSE_THRESHOLD = 0.35; // Close if dragged 35% of screen width
+const SPRING_STIFFNESS = 0.1;
+const SPRING_DAMPING = 0.85;
 
 // Helper to get current X position
 function getMiniPlayerX() {
@@ -718,23 +723,34 @@ function getMiniPlayerX() {
   return rect.left;
 }
 
-// Helper to set mini player position
-function setMiniPlayerPosition(x) {
+// Helper to get mini player width
+function getMiniPlayerWidth() {
   const rect = miniPlayerBox.getBoundingClientRect();
-  const maxX = window.innerWidth - rect.width - 16;
-  const minX = 16 - rect.width; // Allow sliding off-screen
+  return rect.width;
+}
+
+// Helper to set mini player position
+function setMiniPlayerPosition(x, useTransition = false) {
+  const playerWidth = getMiniPlayerWidth();
+  const maxX = window.innerWidth - playerWidth - 16;
+  const minX = -playerWidth + 20; // Allow sliding off-screen
   
   miniPlayerX = Math.max(minX, Math.min(maxX, x));
   
-  miniPlayerBox.style.left = miniPlayerX + 'px';
-  miniPlayerBox.style.right = 'auto';
+  if (useTransition) {
+    miniPlayerBox.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    miniPlayerBox.style.transform = `translateX(${miniPlayerX}px)`;
+  } else {
+    miniPlayerBox.style.transition = 'none';
+    miniPlayerBox.style.transform = `translateX(${miniPlayerX}px)`;
+  }
 }
 
 // Helper to reset mini player position
 function resetMiniPlayerPosition() {
   miniPlayerX = null;
-  miniPlayerBox.style.left = '';
-  miniPlayerBox.style.right = '16px';
+  miniPlayerBox.style.transition = 'none';
+  miniPlayerBox.style.transform = '';
 }
 
 // Helper to close mini player
@@ -748,12 +764,22 @@ function closeMiniPlayerOnSlide() {
   resetMiniPlayerPosition();
 }
 
+// Snap back to center with spring animation
+function snapBackToCenter() {
+  miniPlayerBox.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  resetMiniPlayerPosition();
+}
+
 // Mouse events
 miniPlayerBox.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
   isDragging = true;
   startX = e.clientX;
   startY = e.clientY;
+  lastX = getMiniPlayerX();
+  lastTime = Date.now();
   miniPlayerBox.style.cursor = 'grabbing';
+  miniPlayerBox.style.transition = 'none';
   e.preventDefault();
 });
 
@@ -763,9 +789,8 @@ document.addEventListener('mousemove', (e) => {
   
   // Only start dragging if movement exceeds threshold
   if (Math.abs(deltaX) > DRAG_THRESHOLD) {
-    const newX = getMiniPlayerX() + deltaX;
-    setMiniPlayerPosition(newX);
-    startX = e.clientX;
+    const newX = lastX + deltaX;
+    setMiniPlayerPosition(newX, false);
   }
 });
 
@@ -774,21 +799,39 @@ document.addEventListener('mouseup', (e) => {
   isDragging = false;
   miniPlayerBox.style.cursor = 'grab';
   
-  // Check if mini player was dragged off-screen
   const rect = miniPlayerBox.getBoundingClientRect();
-  const slideOffDistance = window.innerWidth * CLOSE_THRESHOLD;
+  const playerWidth = getMiniPlayerWidth();
+  const closeThresholdPx = window.innerWidth * CLOSE_THRESHOLD;
   
-  if (rect.left < -slideOffDistance || rect.right > window.innerWidth + slideOffDistance) {
-    closeMiniPlayerOnSlide();
+  // Check if dragged far enough to close
+  const leftDragDistance = Math.abs(rect.left);
+  const rightDragDistance = Math.abs(window.innerWidth - rect.right);
+  
+  if (leftDragDistance > closeThresholdPx || rightDragDistance > closeThresholdPx) {
+    // Animate to off-screen and close
+    miniPlayerBox.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    if (rect.left < 0) {
+      miniPlayerBox.style.transform = `translateX(${-playerWidth - 50}px)`;
+    } else {
+      miniPlayerBox.style.transform = `translateX(${window.innerWidth + 50}px)`;
+    }
+    setTimeout(closeMiniPlayerOnSlide, 400);
+  } else {
+    // Snap back to center
+    snapBackToCenter();
   }
 });
 
 // Touch events for mobile
 miniPlayerBox.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
   isDragging = true;
   const touch = e.touches[0];
   startX = touch.clientX;
   startY = touch.clientY;
+  lastX = getMiniPlayerX();
+  lastTime = Date.now();
+  miniPlayerBox.style.transition = 'none';
   e.preventDefault();
 }, { passive: false });
 
@@ -799,9 +842,8 @@ document.addEventListener('touchmove', (e) => {
   
   // Only start dragging if movement exceeds threshold
   if (Math.abs(deltaX) > DRAG_THRESHOLD) {
-    const newX = getMiniPlayerX() + deltaX;
-    setMiniPlayerPosition(newX);
-    startX = touch.clientX;
+    const newX = lastX + deltaX;
+    setMiniPlayerPosition(newX, false);
   }
 }, { passive: false });
 
@@ -809,13 +851,32 @@ document.addEventListener('touchend', (e) => {
   if (!isDragging) return;
   isDragging = false;
   
-  // Check if mini player was dragged off-screen
   const rect = miniPlayerBox.getBoundingClientRect();
-  const slideOffDistance = window.innerWidth * CLOSE_THRESHOLD;
+  const playerWidth = getMiniPlayerWidth();
+  const closeThresholdPx = window.innerWidth * CLOSE_THRESHOLD;
   
-  if (rect.left < -slideOffDistance || rect.right > window.innerWidth + slideOffDistance) {
-    closeMiniPlayerOnSlide();
+  // Check if dragged far enough to close
+  const leftDragDistance = Math.abs(rect.left);
+  const rightDragDistance = Math.abs(window.innerWidth - rect.right);
+  
+  if (leftDragDistance > closeThresholdPx || rightDragDistance > closeThresholdPx) {
+    // Animate to off-screen and close
+    miniPlayerBox.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    if (rect.left < 0) {
+      miniPlayerBox.style.transform = `translateX(${-playerWidth - 50}px)`;
+    } else {
+      miniPlayerBox.style.transform = `translateX(${window.innerWidth + 50}px)`;
+    }
+    setTimeout(closeMiniPlayerOnSlide, 400);
+  } else {
+    // Snap back to center
+    snapBackToCenter();
   }
+});
+
+// Close button handler
+miniCloseBtn.addEventListener('click', () => {
+  closeMiniPlayerOnSlide();
 });
 
 // Close queue panel when clicking outside
