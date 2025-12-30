@@ -943,6 +943,24 @@ body[data-theme="light"] .mini-btn {
     display: none;
 }
 
+/* Mobile adjustments for mini player */
+@media (max-width: 768px) {
+    .mini-player {
+        right: 10px;
+        bottom: 10px;
+        max-width: calc(100vw - 120px);
+        left: auto;
+    }
+    
+    .mini-frame-wrapper {
+        width: 120px;
+    }
+    
+    .mini-title {
+        font-size: 10px;
+    }
+}
+
 /* --- FIX: popup vs mini mode display --- */
 .player-active #ytPlayerContainer {
     display: block;
@@ -1118,6 +1136,14 @@ body[data-theme="light"] .queue-toggle-btn:hover {
     box-shadow: 0 12px 35px rgba(30, 64, 175, 0.6);
 }
 
+/* Shift queue button up when mini player is active (mobile) */
+@media (max-width: 768px) {
+    .queue-toggle-btn.mini-player-active {
+        bottom: 180px;
+        transition: bottom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+}
+
 /* ----------- QUEUE PANEL ----------- */
 
 .queue-panel {
@@ -1144,6 +1170,22 @@ body[data-theme="light"] .queue-panel {
 
 .queue-panel.hidden {
     display: none;
+}
+
+/* Mobile adjustments for queue panel */
+@media (max-width: 768px) {
+    .queue-panel {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        max-width: calc(100vw - 20px);
+        max-height: 400px;
+    }
+    
+    .queue-panel.mini-player-active {
+        bottom: 250px;
+        transition: bottom 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
 }
 
 .queue-header {

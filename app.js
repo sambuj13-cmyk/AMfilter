@@ -479,6 +479,10 @@ function openInMiniPlayer(video) {
   miniPlayerBox.classList.remove("hidden");
   playerModal.classList.add("hidden");
 
+  // Add class to queue button and panel when mini player is open
+  queueToggleBtn.classList.add("mini-player-active");
+  queuePanel.classList.add("mini-player-active");
+
   miniPlayer.loadVideoById({ videoId: video.id, startSeconds: 0 });
   miniPlayer.playVideo();
   miniPlayPauseBtn.textContent = "⏸";
@@ -498,6 +502,10 @@ function openPlayerModal(video, { fromMini = false, resumeTime = 0, wasPlaying =
   miniPlayerBox.classList.add("hidden");
   playerModal.classList.remove("hidden");
   document.body.classList.add("modal-open");
+
+  // Remove class from queue button and panel when mini player closes
+  queueToggleBtn.classList.remove("mini-player-active");
+  queuePanel.classList.remove("mini-player-active");
 
   modalTitleEl.textContent = video.title;
   modalChannelEl.textContent = video.channel;
@@ -543,6 +551,10 @@ function closePlayerModal() {
 
   miniTitleEl.textContent = currentVideo.title;
   miniPlayerBox.classList.remove("hidden");
+
+  // Add class to queue button and panel when mini player opens
+  queueToggleBtn.classList.add("mini-player-active");
+  queuePanel.classList.add("mini-player-active");
 
   miniPlayer.loadVideoById({ videoId: currentVideo.id, startSeconds: t });
 
@@ -646,6 +658,10 @@ miniCloseBtn.addEventListener("click", () => {
     miniPlayer.stopVideo();
   }
   miniPlayerBox.classList.add("hidden");
+  
+  // Remove class from queue button and panel when mini player closes
+  queueToggleBtn.classList.remove("mini-player-active");
+  queuePanel.classList.remove("mini-player-active");
 });
 
 // Mini play/pause
