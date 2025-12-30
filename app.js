@@ -715,6 +715,83 @@ queueToggleBtn.addEventListener("click", toggleQueuePanel);
 queueCloseBtn.addEventListener("click", toggleQueuePanel);
 clearQueueBtn.addEventListener("click", clearQueue);
 
+// ------------ MINI PLAYER DRAG FUNCTIONALITY ------------
+let isDragging = false;
+let startX = 0;
+let miniPlayerX = null; // Store position, null means default (right: 16px)
+
+// Helper to get current X position
+function getMiniPlayerX() {
+  if (miniPlayerX !== null) return miniPlayerX;
+  const rect = miniPlayerBox.getBoundingClientRect();
+  return rect.left;
+}
+
+// Helper to set mini player position
+function setMiniPlayerPosition(x) {
+  const rect = miniPlayerBox.getBoundingClientRect();
+  const maxX = window.innerWidth - rect.width - 16;
+  const minX = 16;
+  
+  // Clamp position within viewport
+  miniPlayerX = Math.max(minX, Math.min(maxX, x));
+  
+  miniPlayerBox.style.left = miniPlayerX + 'px';
+  miniPlayerBox.style.right = 'auto';
+}
+
+// Mouse events
+miniPlayerBox.addEventListener('mousedown', (e) => {
+  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
+  isDragging = true;
+  startX = e.clientX - getMiniPlayerX();
+  miniPlayerBox.style.cursor = 'grabbing';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!isDragging) return;
+  const newX = e.clientX - startX;
+  setMiniPlayerPosition(newX);
+});
+
+document.addEventListener('mouseup', () => {
+  if (isDragging) {
+    isDragging = false;
+    miniPlayerBox.style.cursor = 'grab';
+  }
+});
+
+// Touch events for mobile
+miniPlayerBox.addEventListener('touchstart', (e) => {
+  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
+  isDragging = true;
+  const touch = e.touches[0];
+  startX = touch.clientX - getMiniPlayerX();
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+  if (!isDragging) return;
+  const touch = e.touches[0];
+  const newX = touch.clientX - startX;
+  setMiniPlayerPosition(newX);
+}, { passive: false });
+
+document.addEventListener('touchend', () => {
+  if (isDragging) {
+    isDragging = false;
+  }
+});
+
+// Reset position when mini player is hidden
+const originalMiniClose = miniCloseBtn.onclick;
+miniCloseBtn.addEventListener('click', () => {
+  miniPlayerX = null;
+  miniPlayerBox.style.left = '';
+  miniPlayerBox.style.right = '16px';
+});
+
 // Close queue panel when clicking outside
 document.addEventListener("click", (e) => {
   if (!queuePanel.classList.contains("hidden") && 
