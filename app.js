@@ -707,20 +707,21 @@ clearQueueBtn.addEventListener("click", clearQueue);
 let isDragging = false;
 let startX = 0;
 let startY = 0;
+let initialPlayerX = 0; // Store initial position when drag starts
 let miniPlayerX = null; // Store position, null means default (right: 16px)
-let lastX = 0;
-let lastTime = 0;
-let animationFrameId = null;
-const DRAG_THRESHOLD = 10; // Minimum pixels to start drag
-const CLOSE_THRESHOLD = 0.35; // Close if dragged 35% of screen width
+const DRAG_THRESHOLD = 5; // Minimum pixels to start drag
+const CLOSE_THRESHOLD = 0.5; // Close if dragged 50% of player width off-screen
 const SPRING_STIFFNESS = 0.1;
 const SPRING_DAMPING = 0.85;
 
-// Helper to get current X position
+// Helper to get current X position from transform
 function getMiniPlayerX() {
-  if (miniPlayerX !== null) return miniPlayerX;
-  const rect = miniPlayerBox.getBoundingClientRect();
-  return rect.left;
+  const transform = miniPlayerBox.style.transform;
+  if (transform && transform.includes('translateX')) {
+    const match = transform.match(/translateX\(([^)]+)px\)/);
+    if (match) return parseFloat(match[1]);
+  }
+  return 0; // Default center position
 }
 
 // Helper to get mini player width
@@ -732,25 +733,25 @@ function getMiniPlayerWidth() {
 // Helper to set mini player position
 function setMiniPlayerPosition(x, useTransition = false) {
   const playerWidth = getMiniPlayerWidth();
-  const maxX = window.innerWidth - playerWidth - 16;
-  const minX = -playerWidth + 20; // Allow sliding off-screen
+  // Allow player to slide both left and right off-screen
+  const maxX = window.innerWidth;
+  const minX = -playerWidth;
   
   miniPlayerX = Math.max(minX, Math.min(maxX, x));
   
   if (useTransition) {
     miniPlayerBox.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    miniPlayerBox.style.transform = `translateX(${miniPlayerX}px)`;
   } else {
     miniPlayerBox.style.transition = 'none';
-    miniPlayerBox.style.transform = `translateX(${miniPlayerX}px)`;
   }
+  miniPlayerBox.style.transform = `translateX(${miniPlayerX}px)`;
 }
 
-// Helper to reset mini player position
+// Helper to reset mini player position to center
 function resetMiniPlayerPosition() {
-  miniPlayerX = null;
-  miniPlayerBox.style.transition = 'none';
-  miniPlayerBox.style.transform = '';
+  miniPlayerX = 0;
+  miniPlayerBox.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  miniPlayerBox.style.transform = 'translateX(0)';
 }
 
 // Helper to close mini player
@@ -761,23 +762,26 @@ function closeMiniPlayerOnSlide() {
   miniPlayerBox.classList.add("hidden");
   queueToggleBtn.classList.remove("mini-player-active");
   queuePanel.classList.remove("mini-player-active");
-  resetMiniPlayerPosition();
+  miniPlayerX = 0;
+  miniPlayerBox.style.transition = 'none';
+  miniPlayerBox.style.transform = 'translateX(0)';
 }
 
 // Snap back to center with spring animation
 function snapBackToCenter() {
   miniPlayerBox.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-  resetMiniPlayerPosition();
+  miniPlayerX = 0;
+  miniPlayerBox.style.transform = 'translateX(0)';
 }
 
 // Mouse events
 miniPlayerBox.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
+  // Don't start drag on buttons
+  if (e.target.closest('.mini-btn')) return;
   isDragging = true;
   startX = e.clientX;
   startY = e.clientY;
-  lastX = getMiniPlayerX();
-  lastTime = Date.now();
+  initialPlayerX = getMiniPlayerX();
   miniPlayerBox.style.cursor = 'grabbing';
   miniPlayerBox.style.transition = 'none';
   e.preventDefault();
@@ -789,7 +793,7 @@ document.addEventListener('mousemove', (e) => {
   
   // Only start dragging if movement exceeds threshold
   if (Math.abs(deltaX) > DRAG_THRESHOLD) {
-    const newX = lastX + deltaX;
+    const newX = initialPlayerX + deltaX;
     setMiniPlayerPosition(newX, false);
   }
 });
@@ -799,18 +803,15 @@ document.addEventListener('mouseup', (e) => {
   isDragging = false;
   miniPlayerBox.style.cursor = 'grab';
   
-  const rect = miniPlayerBox.getBoundingClientRect();
+  const currentX = getMiniPlayerX();
   const playerWidth = getMiniPlayerWidth();
-  const closeThresholdPx = window.innerWidth * CLOSE_THRESHOLD;
+  const closeThresholdPx = playerWidth * CLOSE_THRESHOLD;
   
-  // Check if dragged far enough to close
-  const leftDragDistance = Math.abs(rect.left);
-  const rightDragDistance = Math.abs(window.innerWidth - rect.right);
-  
-  if (leftDragDistance > closeThresholdPx || rightDragDistance > closeThresholdPx) {
+  // Check if dragged far enough to close (off-screen on either side)
+  if (currentX < -closeThresholdPx || currentX > window.innerWidth - playerWidth + closeThresholdPx) {
     // Animate to off-screen and close
     miniPlayerBox.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    if (rect.left < 0) {
+    if (currentX < 0) {
       miniPlayerBox.style.transform = `translateX(${-playerWidth - 50}px)`;
     } else {
       miniPlayerBox.style.transform = `translateX(${window.innerWidth + 50}px)`;
@@ -824,13 +825,13 @@ document.addEventListener('mouseup', (e) => {
 
 // Touch events for mobile
 miniPlayerBox.addEventListener('touchstart', (e) => {
-  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
+  // Don't start drag on buttons
+  if (e.target.closest('.mini-btn')) return;
   isDragging = true;
   const touch = e.touches[0];
   startX = touch.clientX;
   startY = touch.clientY;
-  lastX = getMiniPlayerX();
-  lastTime = Date.now();
+  initialPlayerX = getMiniPlayerX();
   miniPlayerBox.style.transition = 'none';
   e.preventDefault();
 }, { passive: false });
@@ -842,7 +843,7 @@ document.addEventListener('touchmove', (e) => {
   
   // Only start dragging if movement exceeds threshold
   if (Math.abs(deltaX) > DRAG_THRESHOLD) {
-    const newX = lastX + deltaX;
+    const newX = initialPlayerX + deltaX;
     setMiniPlayerPosition(newX, false);
   }
 }, { passive: false });
@@ -851,18 +852,15 @@ document.addEventListener('touchend', (e) => {
   if (!isDragging) return;
   isDragging = false;
   
-  const rect = miniPlayerBox.getBoundingClientRect();
+  const currentX = getMiniPlayerX();
   const playerWidth = getMiniPlayerWidth();
-  const closeThresholdPx = window.innerWidth * CLOSE_THRESHOLD;
+  const closeThresholdPx = playerWidth * CLOSE_THRESHOLD;
   
-  // Check if dragged far enough to close
-  const leftDragDistance = Math.abs(rect.left);
-  const rightDragDistance = Math.abs(window.innerWidth - rect.right);
-  
-  if (leftDragDistance > closeThresholdPx || rightDragDistance > closeThresholdPx) {
+  // Check if dragged far enough to close (off-screen on either side)
+  if (currentX < -closeThresholdPx || currentX > window.innerWidth - playerWidth + closeThresholdPx) {
     // Animate to off-screen and close
     miniPlayerBox.style.transition = 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
-    if (rect.left < 0) {
+    if (currentX < 0) {
       miniPlayerBox.style.transform = `translateX(${-playerWidth - 50}px)`;
     } else {
       miniPlayerBox.style.transform = `translateX(${window.innerWidth + 50}px)`;
