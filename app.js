@@ -652,18 +652,6 @@ playerModal.addEventListener("click", e => {
   if (e.target.classList.contains("player-modal-backdrop")) closePlayerModal();
 });
 
-// Mini close
-miniCloseBtn.addEventListener("click", () => {
-  if (miniPlayer && miniReady) {
-    miniPlayer.stopVideo();
-  }
-  miniPlayerBox.classList.add("hidden");
-  
-  // Remove class from queue button and panel when mini player closes
-  queueToggleBtn.classList.remove("mini-player-active");
-  queuePanel.classList.remove("mini-player-active");
-});
-
 // Mini play/pause
 miniPlayPauseBtn.addEventListener("click", () => {
   const st = miniPlayer.getPlayerState();
@@ -718,7 +706,10 @@ clearQueueBtn.addEventListener("click", clearQueue);
 // ------------ MINI PLAYER DRAG FUNCTIONALITY ------------
 let isDragging = false;
 let startX = 0;
+let startY = 0;
 let miniPlayerX = null; // Store position, null means default (right: 16px)
+const DRAG_THRESHOLD = 10; // Minimum pixels to start drag
+const CLOSE_THRESHOLD = 0.4; // Close if dragged 40% of screen width
 
 // Helper to get current X position
 function getMiniPlayerX() {
@@ -731,65 +722,100 @@ function getMiniPlayerX() {
 function setMiniPlayerPosition(x) {
   const rect = miniPlayerBox.getBoundingClientRect();
   const maxX = window.innerWidth - rect.width - 16;
-  const minX = 16;
+  const minX = 16 - rect.width; // Allow sliding off-screen
   
-  // Clamp position within viewport
   miniPlayerX = Math.max(minX, Math.min(maxX, x));
   
   miniPlayerBox.style.left = miniPlayerX + 'px';
   miniPlayerBox.style.right = 'auto';
 }
 
+// Helper to reset mini player position
+function resetMiniPlayerPosition() {
+  miniPlayerX = null;
+  miniPlayerBox.style.left = '';
+  miniPlayerBox.style.right = '16px';
+}
+
+// Helper to close mini player
+function closeMiniPlayerOnSlide() {
+  if (miniPlayer && miniReady) {
+    miniPlayer.stopVideo();
+  }
+  miniPlayerBox.classList.add("hidden");
+  queueToggleBtn.classList.remove("mini-player-active");
+  queuePanel.classList.remove("mini-player-active");
+  resetMiniPlayerPosition();
+}
+
 // Mouse events
 miniPlayerBox.addEventListener('mousedown', (e) => {
-  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
   isDragging = true;
-  startX = e.clientX - getMiniPlayerX();
+  startX = e.clientX;
+  startY = e.clientY;
   miniPlayerBox.style.cursor = 'grabbing';
   e.preventDefault();
 });
 
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
-  const newX = e.clientX - startX;
-  setMiniPlayerPosition(newX);
+  const deltaX = e.clientX - startX;
+  
+  // Only start dragging if movement exceeds threshold
+  if (Math.abs(deltaX) > DRAG_THRESHOLD) {
+    const newX = getMiniPlayerX() + deltaX;
+    setMiniPlayerPosition(newX);
+    startX = e.clientX;
+  }
 });
 
-document.addEventListener('mouseup', () => {
-  if (isDragging) {
-    isDragging = false;
-    miniPlayerBox.style.cursor = 'grab';
+document.addEventListener('mouseup', (e) => {
+  if (!isDragging) return;
+  isDragging = false;
+  miniPlayerBox.style.cursor = 'grab';
+  
+  // Check if mini player was dragged off-screen
+  const rect = miniPlayerBox.getBoundingClientRect();
+  const slideOffDistance = window.innerWidth * CLOSE_THRESHOLD;
+  
+  if (rect.left < -slideOffDistance || rect.right > window.innerWidth + slideOffDistance) {
+    closeMiniPlayerOnSlide();
   }
 });
 
 // Touch events for mobile
 miniPlayerBox.addEventListener('touchstart', (e) => {
-  if (e.target.closest('.mini-btn') || e.target.closest('iframe')) return;
   isDragging = true;
   const touch = e.touches[0];
-  startX = touch.clientX - getMiniPlayerX();
+  startX = touch.clientX;
+  startY = touch.clientY;
   e.preventDefault();
 }, { passive: false });
 
 document.addEventListener('touchmove', (e) => {
   if (!isDragging) return;
   const touch = e.touches[0];
-  const newX = touch.clientX - startX;
-  setMiniPlayerPosition(newX);
+  const deltaX = touch.clientX - startX;
+  
+  // Only start dragging if movement exceeds threshold
+  if (Math.abs(deltaX) > DRAG_THRESHOLD) {
+    const newX = getMiniPlayerX() + deltaX;
+    setMiniPlayerPosition(newX);
+    startX = touch.clientX;
+  }
 }, { passive: false });
 
-document.addEventListener('touchend', () => {
-  if (isDragging) {
-    isDragging = false;
+document.addEventListener('touchend', (e) => {
+  if (!isDragging) return;
+  isDragging = false;
+  
+  // Check if mini player was dragged off-screen
+  const rect = miniPlayerBox.getBoundingClientRect();
+  const slideOffDistance = window.innerWidth * CLOSE_THRESHOLD;
+  
+  if (rect.left < -slideOffDistance || rect.right > window.innerWidth + slideOffDistance) {
+    closeMiniPlayerOnSlide();
   }
-});
-
-// Reset position when mini player is hidden
-const originalMiniClose = miniCloseBtn.onclick;
-miniCloseBtn.addEventListener('click', () => {
-  miniPlayerX = null;
-  miniPlayerBox.style.left = '';
-  miniPlayerBox.style.right = '16px';
 });
 
 // Close queue panel when clicking outside
